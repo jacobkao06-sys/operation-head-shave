@@ -31,7 +31,20 @@ With no credentials at all the app still runs end to end:
 | Instagram | `USE_MOCK_SOURCE=true` + `MOCK_LAST_POST_AT=-8d` |
 | Anthropic | `VISION_STUB={"shaved":true,...}` (ignored in production) |
 
-Drive the whole failure chain without waiting seven days:
+### Poking at it
+
+```bash
+npm run demo              # FAILURE, countdown running — the interesting one
+npm run demo safe
+npm run demo pending      # photo submitted, countdown frozen, awaiting review
+npm run demo resolved
+```
+
+Each run wipes local state and rebuilds it by driving the real HTTP endpoints, so
+what you see is the actual state machine rather than a fixture. It prints every
+URL including the current protocol token and the barber approve link.
+
+Drive the whole failure chain by hand without waiting seven days:
 
 ```bash
 curl -s -X POST localhost:3000/api/check -H "Authorization: Bearer $CRON_SECRET" -H 'content-type: application/json' -d '{"simulateLastPostAt":"2026-09-01T00:00:00Z"}'
