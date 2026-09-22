@@ -125,10 +125,14 @@ export async function dispatch(
   const dryRun = await isDryRun();
   const intended = await resolveRecipient(effect.to);
   if (!intended) {
+    // `dryRun` is reported even on this early return. It used to fall through
+    // to the `false` in `base`, which made the audit log claim mail was live
+    // when it was not — a lie in the one record that is supposed to be exact.
     return {
       ...base,
       resolvedTo: "(unset)",
       ok: false,
+      dryRun,
       error: `No address configured for recipient "${effect.to}"`,
     };
   }

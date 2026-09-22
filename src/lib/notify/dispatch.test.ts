@@ -162,3 +162,19 @@ describe("template rendering", () => {
     expect(n.sent).toHaveLength(0);
   });
 });
+
+describe("audit accuracy", () => {
+  it("reports the real dry-run state even when the recipient is unset", async () => {
+    delete process.env.ANDREA_EMAIL;
+    process.env.DRY_RUN = "true";
+    const n = new CapturingNotifier();
+    const r = await dispatch(
+      { type: "email", template: "andrea", to: "andrea", reason: "" },
+      { state: failed, now: NOW },
+      { notifier: n, barberIsPlaceholder: true },
+    );
+    expect(r.ok).toBe(false);
+    // The log must not claim mail was live when DRY_RUN was on.
+    expect(r.dryRun).toBe(true);
+  });
+});
