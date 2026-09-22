@@ -1,0 +1,107 @@
+# SPEC.md §8. GitHub Actions rather than Vercel Cron: Hobby caps cron at once a
+# day, and committing the log each run gives a public, timestamped,
+# tamper-evident record — and keeps the repo active so GitHub does not disable
+# the schedule after 60 days of inactivity.
+
+name: check
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # every 6 hours UTC
+  workflow_dispatch:
+    inputs:
+      simulateLastPostAt:
+        description: "ISO8601 — force lastPostAt for a dry test run"
+        required: false
+        type: string
+
+concurrency:
+  group: ohs-check
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Call /api/check
+        id: call
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SIMULATE: ${{ inputs.simulateLastPostAt }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::APP_URL and CRON_SECRET must both be set as repository secrets"
+            exit 1
+          fi
+
+          body='{}'
+          if [ -n "${SIMULATE:-}" ]; then
+            body="$(jq -nc --arg t "$SIMULATE" '{simulateLastPostAt:$t}')"
+          fi
+
+          code=$(curl -sS --max-time 90 -o response.json -w '%{http_code}' \
+            -X POST "$APP_URL/api/check" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "content-type: application/json" \
+            -d "$body")
+
+          echo "http_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" != "200" ]; then
+            echo "::error::/api/check returned $code"
+            jq . response.json || cat response.json
+            exit 1
+          fi
+
+          jq -r '.status' response.json > /tmp/status
+          echo "status=$(cat /tmp/status)" >> "$GITHUB_OUTPUT"
+
+      - name: Write the audit log
+        run: |
+          set -euo pipefail
+          mkdir -p log
+
+          # state.json is the full snapshot. It contains no secrets: the
+          # Instagram token lives in KV and never appears in this response.
+          jq '.state' response.json > log/state.json
+
+          # events.ndjson is append-only: one line per event, forever.
+          jq -c --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '.events[]? | {at: (.at // $at), event, detail}' response.json >> log/events.ndjson || true
+
+          # One line per run, so a silent stall is visible in the file itself.
+          jq -c --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{at: $at, event: "cron.run", status: .status, fetchOk: .fetchOk,
+              sourceError: .sourceError, conflict: .conflict,
+              mail: [.dispatched[]? | {template, to, ok, dryRun}]}' \
+            response.json >> log/events.ndjson
+
+      - name: Commit if anything changed
+        env:
+          STATUS: ${{ steps.call.outputs.status }}
+        run: |
+          set -euo pipefail
+          git config user.name "ohs-bot"
+          git config user.email "ohs-bot@users.noreply.github.com"
+          git add log/
+          if git diff --cached --quiet; then
+            echo "nothing changed"
+            exit 0
+          fi
+          git commit -m "chore(log): check $(date -u +%Y-%m-%dT%H:%M:%SZ) $STATUS"
+          # The schedule can overlap a human push; rebase rather than fail.
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Fail loudly on a broken rig
+        if: always() && steps.call.outputs.http_code != '200'
+        run: |
+          echo "::error::The check did not complete. The system fails safe — it will not"
+          echo "::error::have transitioned — but it is also not watching. See §12 of SPEC.md."
+          exit 1

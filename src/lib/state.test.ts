@@ -156,7 +156,7 @@ describe("hard rule 1 — fail safe", () => {
   });
 
   it("emails Jacob on the second consecutive failed check, not the first", () => {
-    let s = safeWith(2 * DAY, T0);
+    const s = safeWith(2 * DAY, T0);
     const a = evaluateCheck(s, { now: T0, fetchOk: false, latestPost: null }, cfg(), mint);
     expect(emails(a.effects)).toEqual([]);
     const b = evaluateCheck(a.state, { now: at(6 * HOUR), fetchOk: false, latestPost: null }, cfg(), mint);

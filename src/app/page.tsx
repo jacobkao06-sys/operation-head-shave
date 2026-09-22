@@ -32,7 +32,7 @@ export default async function Page() {
   const now = new Date();
   const heading = headingFor(state.status);
   const showCountdown = state.status === "FAILURE" || state.status === "PENDING_REVIEW";
-  const noscriptRemaining = state.deadlineAt
+  const remaining = state.deadlineAt
     ? Math.max(0, Date.parse(state.deadlineAt) - now.getTime())
     : (state.remainingMs ?? 0);
 
@@ -82,9 +82,13 @@ export default async function Page() {
 
         {showCountdown ? (
           <div>
-            <Countdown deadlineAt={state.deadlineAt} frozenMs={state.remainingMs} />
+            <Countdown
+              deadlineAt={state.deadlineAt}
+              frozenMs={state.remainingMs}
+              serverRemainingMs={remaining}
+            />
             <noscript>
-              <div className="countdown">{hhmmss(noscriptRemaining)}</div>
+              <div className="countdown">{hhmmss(remaining)}</div>
               <p className="statusblock">
                 STATIC — RELOAD FOR THE CURRENT VALUE. DEADLINE {state.deadlineAt ?? "FROZEN"}
               </p>

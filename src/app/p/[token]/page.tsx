@@ -38,8 +38,9 @@ export default async function ProtocolPage({
   if (state.status !== "FAILURE" && state.status !== "PENDING_REVIEW") notFound();
 
   const frozen = state.status === "PENDING_REVIEW";
-  const noscriptRemaining = state.deadlineAt
-    ? Math.max(0, Date.parse(state.deadlineAt) - Date.now())
+  const now = new Date();
+  const remaining = state.deadlineAt
+    ? Math.max(0, Date.parse(state.deadlineAt) - now.getTime())
     : (state.remainingMs ?? 0);
 
   return (
@@ -61,9 +62,13 @@ export default async function ProtocolPage({
         </h1>
 
         <div>
-          <Countdown deadlineAt={state.deadlineAt} frozenMs={state.remainingMs} />
+          <Countdown
+            deadlineAt={state.deadlineAt}
+            frozenMs={state.remainingMs}
+            serverRemainingMs={remaining}
+          />
           <noscript>
-            <div className="countdown">{hhmmss(noscriptRemaining)}</div>
+            <div className="countdown">{hhmmss(remaining)}</div>
             <p className="statusblock">STATIC — RELOAD FOR THE CURRENT VALUE.</p>
           </noscript>
         </div>
