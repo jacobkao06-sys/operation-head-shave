@@ -1,26 +1,267 @@
 @import "tailwindcss";
 
+/* SPEC.md §5 — visual direction. Terminal phosphor on black. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #000000;
+  --safe: #00ff41;
+  --failure: #ff2d2d;
+  --dim: #00803a;
+  --dim-failure: #8a1f1f;
+  --mono: ui-monospace, "JetBrains Mono", "IBM Plex Mono", Menlo, Consolas, monospace;
+
+  --fg: var(--safe);
+  --fg-dim: var(--dim);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* FAILURE repaints the whole palette rather than overriding it per element.
+   `color` is re-declared here as well as on body: redefining a custom property
+   alone does not recolour inherited text, because `color: var(--fg)` was
+   already resolved against body's value. */
+[data-status] {
+  color: var(--fg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+[data-status="FAILURE"],
+[data-status="PENDING_REVIEW"] {
+  --fg: var(--failure);
+  --fg-dim: var(--dim-failure);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  /* The glow is decoration. Contrast must survive without it. */
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100svh;
+  overflow-x: hidden;
+}
+
+a {
+  color: var(--fg);
+  text-underline-offset: 3px;
+}
+
+/* --- CRT dressing -------------------------------------------------------- */
+/* Both layers are decorative and pointer-events:none, so they can never eat a
+   click on the upload button. Both vanish under prefers-reduced-motion. */
+
+.crt::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.28) 3px,
+    rgba(0, 0, 0, 0.28) 4px
+  );
+  mix-blend-mode: multiply;
+}
+
+.crt::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.7) 100%);
+}
+
+/* --- Typography ---------------------------------------------------------- */
+
+.heading {
+  color: var(--fg);
+  font-size: clamp(4rem, 18vw, 14rem);
+  line-height: 0.88;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin: 0;
+  text-shadow:
+    0 0 0.06em color-mix(in srgb, var(--fg) 85%, transparent),
+    0 0 0.35em color-mix(in srgb, var(--fg) 45%, transparent),
+    0 0 1.1em color-mix(in srgb, var(--fg) 22%, transparent);
+}
+
+[data-status="FAILURE"] .heading {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Slow, never a strobe. §5. */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+
+.caption {
+  font-size: 1rem;
+  line-height: 1.75;
+  max-width: 60ch;
+  color: var(--fg);
+}
+
+.caption strong {
+  font-weight: 700;
+  text-shadow: 0 0 0.4em color-mix(in srgb, var(--fg) 50%, transparent);
+}
+
+.countdown {
+  color: var(--fg);
+  font-size: clamp(2.5rem, 12vw, 8rem);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-shadow:
+    0 0 0.06em color-mix(in srgb, var(--fg) 80%, transparent),
+    0 0 0.4em color-mix(in srgb, var(--fg) 40%, transparent);
+}
+
+.statusblock {
+  font-size: 0.82rem;
+  line-height: 1.9;
+  color: var(--fg-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* --- Blinking block cursor ----------------------------------------------- */
+
+.cursor {
+  display: inline-block;
+  width: 0.52em;
+  height: 0.82em;
+  margin-left: 0.08em;
+  vertical-align: baseline;
+  background: var(--fg);
+  animation: blink 1.06s step-end infinite;
+  box-shadow: 0 0 0.5em color-mix(in srgb, var(--fg) 60%, transparent);
+}
+
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* --- Boot sequence ------------------------------------------------------- */
+/* Pure CSS so the text is in the HTML and readable with JS disabled. If
+   animations never run, the reveal ends in its final visible state anyway. */
+
+.boot > * {
+  animation: bootline 0.42s steps(24, end) both;
+}
+
+.boot > *:nth-child(1) { animation-delay: 0.05s; }
+.boot > *:nth-child(2) { animation-delay: 0.30s; }
+.boot > *:nth-child(3) { animation-delay: 0.55s; }
+.boot > *:nth-child(4) { animation-delay: 0.80s; }
+.boot > *:nth-child(5) { animation-delay: 1.05s; }
+.boot > *:nth-child(6) { animation-delay: 1.30s; }
+
+@keyframes bootline {
+  from {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* --- Forms --------------------------------------------------------------- */
+
+.btn {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.85rem 1.4rem;
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--fg);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btn:hover:not(:disabled),
+.btn:focus-visible {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.field {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  background: #050505;
+  color: var(--fg);
+  border: 1px solid var(--fg-dim);
+}
+
+.field:focus-visible,
+.btn:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+/* --- Reduced motion ------------------------------------------------------ */
+/* §5: drop flicker, typewriter, and scanlines. Everything stays legible. */
+
+@media (prefers-reduced-motion: reduce) {
+  .crt::before,
+  .crt::after {
+    display: none;
+  }
+
+  .heading,
+  .cursor,
+  .boot > * {
+    animation: none !important;
+  }
+
+  .cursor {
+    opacity: 1;
+  }
+
+  .boot > * {
+    opacity: 1;
+    clip-path: none;
+  }
+
+  * {
+    transition: none !important;
+  }
 }
