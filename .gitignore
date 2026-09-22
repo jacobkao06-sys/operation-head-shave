@@ -40,3 +40,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .ohs-local-state.json
+.ohs-outbox/
+.ohs-uploads/

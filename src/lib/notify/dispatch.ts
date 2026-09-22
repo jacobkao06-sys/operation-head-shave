@@ -11,9 +11,10 @@
 import { env_ } from "../config";
 import { fmtIso, fmtLocal } from "../time";
 import { loadOverrides } from "../store";
+import { reviewLink } from "../auth";
 import type { Effect, EmailTemplateName, Recipient, State } from "../types";
-import { EmailNotifier, type Notifier } from "./index";
-import { render } from "./templates";
+import { defaultNotifier, type Notifier } from "./index";
+import { render, loadTemplate, split, interpolate } from "./templates";
 
 const HOUR_MS = 3_600_000;
 
@@ -84,8 +85,8 @@ export function buildVars(ctx: VarContext): Record<string, string> {
     vision_reason: state.submission?.vision.reason ?? "—",
     submitted_local: fmtLocal(state.submission?.submittedAt ?? null),
     photo_url: state.submission ? `${publicUrl}/api/photo/${state.submission.blobKey}` : "—",
-    confirm_url: "",
-    reject_url: "",
+    confirm_url: reviewLink("confirm", state.episode),
+    reject_url: reviewLink("reject", state.episode),
     ...ctx.extra,
   };
 }
@@ -138,6 +139,14 @@ export async function dispatch(
   }
 
   const vars = buildVars({ ...ctx, reason: effect.reason });
+
+  // The draft email quotes the barber template verbatim, so Jacob approves the
+  // exact bytes that would go out rather than a paraphrase of them.
+  if (effect.template === "jacob-barber-draft") {
+    const barber = split(await loadTemplate("barber"));
+    vars.barber_draft = `Subject: ${interpolate(barber.subject, vars)}\n\n${interpolate(barber.body, vars)}`;
+  }
+
   const { subject, body } = await render(effect.template, vars);
 
   const to = dryRun ? (jacob as string) : intended;
@@ -148,7 +157,7 @@ export async function dispatch(
     : body;
 
   try {
-    const notifier = opts.notifier ?? new EmailNotifier();
+    const notifier = opts.notifier ?? defaultNotifier();
     await notifier.send(to, finalSubject, finalBody);
     return { ...base, resolvedTo: to, ok: true, dryRun };
   } catch (err) {

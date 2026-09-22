@@ -6,6 +6,8 @@
  * not a refactor. SMS is deliberately out of scope at launch (A2P 10DLC).
  */
 
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import { Resend } from "resend";
 import { env_ } from "../config";
 
@@ -61,4 +63,34 @@ export class CapturingNotifier implements Notifier {
     this.sent.push({ to, subject, body });
     return { id: `captured-${this.sent.length}` };
   }
+}
+
+/**
+ * Local development only. Writes each message to .ohs-outbox/ so a dry run is
+ * inspectable without a Resend key. Refuses to be selected in production.
+ */
+export class FileNotifier implements Notifier {
+  private dir = path.join(process.cwd(), ".ohs-outbox");
+
+  async send(to: string, subject: string, body: string): Promise<{ id: string }> {
+    await fs.mkdir(this.dir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const slug = subject.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 60);
+    const file = path.join(this.dir, `${stamp}_${slug}.txt`);
+    await fs.writeFile(file, `To: ${to}\nSubject: ${subject}\n\n${body}\n`);
+    return { id: path.basename(file) };
+  }
+}
+
+/**
+ * Picks the delivery channel. Resend whenever a key exists. Without one, the
+ * file outbox in development and a hard error in production — silently dropping
+ * Andrea's dispatch email would be the worst possible failure mode.
+ */
+export function defaultNotifier(): Notifier {
+  if (env_.resendKey()) return new EmailNotifier();
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("RESEND_API_KEY is not set — refusing to silently drop mail in production");
+  }
+  return new FileNotifier();
 }
