@@ -52,8 +52,12 @@ export const env_ = {
       .map((s) => s.trim().toUpperCase())
       .filter(Boolean),
 
-  upstashUrl: () => env("UPSTASH_REDIS_REST_URL"),
-  upstashToken: () => env("UPSTASH_REDIS_REST_TOKEN"),
+  // Vercel's Upstash Marketplace integration publishes its credentials under the
+  // legacy KV_* names, not the UPSTASH_* names in SPEC.md §10. Accept either, so
+  // the app works whether the store was provisioned through the Marketplace or
+  // configured by hand against Upstash directly.
+  upstashUrl: () => env("UPSTASH_REDIS_REST_URL") ?? env("KV_REST_API_URL"),
+  upstashToken: () => env("UPSTASH_REDIS_REST_TOKEN") ?? env("KV_REST_API_TOKEN"),
   blobToken: () => env("BLOB_READ_WRITE_TOKEN"),
 
   resendKey: () => env("RESEND_API_KEY"),
