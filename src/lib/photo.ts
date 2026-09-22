@@ -11,7 +11,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import sharp, { type OutputInfo } from "sharp";
-import { env_ } from "./config";
+import { blobConfigured, env_ } from "./config";
 import { mintToken } from "./tokens";
 
 export const MAX_BYTES = 10 * 1024 * 1024;
@@ -109,13 +109,16 @@ export interface StoredPhoto {
 export async function storePhoto(photo: NormalizedPhoto): Promise<StoredPhoto> {
   const key = `proof/${mintToken()}.jpg`;
 
-  if (env_.blobToken()) {
+  if (blobConfigured()) {
     const { put } = await import("@vercel/blob");
     const res = await put(key, photo.data, {
       access: "private",
       contentType: photo.mediaType,
       addRandomSuffix: false,
-      token: env_.blobToken(),
+      // Only pass an explicit token when there is one. With the OIDC-style
+      // store the SDK reads VERCEL_OIDC_TOKEN + BLOB_STORE_ID itself, and
+      // passing `token: undefined` would defeat that.
+      ...(env_.blobToken() ? { token: env_.blobToken() } : {}),
     });
     return { key, url: res.url };
   }
@@ -130,10 +133,13 @@ export async function storePhoto(photo: NormalizedPhoto): Promise<StoredPhoto> {
 }
 
 export async function readPhoto(key: string): Promise<Buffer | null> {
-  if (env_.blobToken()) {
+  if (blobConfigured()) {
     const { get } = await import("@vercel/blob");
     try {
-      const res = await get(key, { access: "private", token: env_.blobToken() });
+      const res = await get(key, {
+        access: "private",
+        ...(env_.blobToken() ? { token: env_.blobToken() } : {}),
+      });
       const chunks: Buffer[] = [];
       // @ts-expect-error — the SDK returns a web ReadableStream, which is async-iterable at runtime
       for await (const chunk of res.stream) chunks.push(Buffer.from(chunk));

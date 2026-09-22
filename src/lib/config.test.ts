@@ -30,3 +30,25 @@ describe("storage credentials — either naming", () => {
     expect(env_.upstashToken()).toBeUndefined();
   });
 });
+
+describe("blob credentials — token or OIDC store id", () => {
+  const blobKeys = ["BLOB_READ_WRITE_TOKEN", "BLOB_STORE_ID"];
+  afterEach(() => blobKeys.forEach((k) => delete process.env[k]));
+
+  it("is configured by a static read-write token", async () => {
+    process.env.BLOB_READ_WRITE_TOKEN = "vercel_blob_rw_x";
+    const { blobConfigured } = await import("./config");
+    expect(blobConfigured()).toBe(true);
+  });
+
+  it("is configured by an OIDC store id alone", async () => {
+    process.env.BLOB_STORE_ID = "store_abc";
+    const { blobConfigured } = await import("./config");
+    expect(blobConfigured()).toBe(true);
+  });
+
+  it("is not configured when neither is present", async () => {
+    const { blobConfigured } = await import("./config");
+    expect(blobConfigured()).toBe(false);
+  });
+});

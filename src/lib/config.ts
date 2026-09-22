@@ -59,6 +59,7 @@ export const env_ = {
   upstashUrl: () => env("UPSTASH_REDIS_REST_URL") ?? env("KV_REST_API_URL"),
   upstashToken: () => env("UPSTASH_REDIS_REST_TOKEN") ?? env("KV_REST_API_TOKEN"),
   blobToken: () => env("BLOB_READ_WRITE_TOKEN"),
+  blobStoreId: () => env("BLOB_STORE_ID"),
 
   resendKey: () => env("RESEND_API_KEY"),
   mailFrom: () => env("MAIL_FROM") ?? "protocol@mail.jacobkao.com",
@@ -88,6 +89,16 @@ export const env_ = {
  * `auto` is armed only when BARBER_MODE=auto AND BARBER_CONFIRM_PHRASE matches
  * the phrase exactly. SPEC.md §7: a stray env edit must not mail a real business.
  */
+/**
+ * Vercel provisions Blob one of two ways: an older static BLOB_READ_WRITE_TOKEN,
+ * or OIDC (VERCEL_OIDC_TOKEN + BLOB_STORE_ID), which is what the current
+ * Marketplace integration sets. The SDK resolves either from the environment on
+ * its own, so we only need to know whether a store exists at all.
+ */
+export function blobConfigured(): boolean {
+  return Boolean(env_.blobToken() ?? env_.blobStoreId());
+}
+
 export function barberAutoArmed(): boolean {
   return env_.barberMode() === "auto" && env_.barberConfirmPhrase() === BARBER_CONFIRM_PHRASE;
 }
