@@ -69,7 +69,8 @@ describe("SAFE -> FAILURE", () => {
     expect(state.status).toBe("FAILURE");
     expect(state.consecutiveStaleChecks).toBe(2);
     expect(emails(effects)).toContain("andrea->andrea");
-    expect(emails(effects)).toContain("jacob-alert->jacob");
+    // Jacob is deliberately NOT warned on declaration — see declareFailure().
+    expect(emails(effects)).not.toContain("jacob-alert->jacob");
   });
 
   it("sets deadlineAt to exactly 72h after the declaration, not after the post", () => {
@@ -206,6 +207,18 @@ describe("hard rule 2 — idempotent side effects", () => {
     const { state } = driveToFailure(safeWith(8 * DAY, T0));
     expect(state.status).toBe("FAILURE");
     expect(state.notifiedAndreaAt).toBe(state.failureDeclaredAt);
+  });
+});
+
+describe("who is told when the protocol fires", () => {
+  it("dispatches Andrea and nobody else is warned about the deadline", () => {
+    const { effects } = driveToFailure(safeWith(8 * DAY, T0), cfg({ barberMode: "off" }));
+    expect(emails(effects)).toEqual(["andrea->andrea"]);
+  });
+
+  it("still sends Jacob the barber draft, because approving it needs his click", () => {
+    const { effects } = driveToFailure(safeWith(8 * DAY, T0), cfg({ barberMode: "draft" }));
+    expect(emails(effects).sort()).toEqual(["andrea->andrea", "jacob-barber-draft->jacob"]);
   });
 });
 

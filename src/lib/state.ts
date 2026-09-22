@@ -204,10 +204,12 @@ function declareFailure(
   effects.push({ type: "email", template: "andrea", to: "andrea", reason: "failure declared" });
   next.notifiedAndreaAt = nowIso;
 
-  // Jacob gets his warning at the same moment Andrea gets hers (§4, the
-  // cross-post gap mitigation). 72 hours to override from /admin.
-  effects.push({ type: "email", template: "jacob-alert", to: "jacob", reason: "failure declared" });
-  next.notifiedJacobFailureAt = nowIso;
+  // NO alert to Jacob on declaration. SPEC.md §4 wanted one as the mitigation
+  // for the cross-post gap — a video posted to TikTok only would declare a
+  // false failure, and the alert was the 72-hour window to catch it. Jacob
+  // decided on 2026-09-22 that the dispatch should reach Andrea alone, and
+  // accepted that a false firing now runs unopposed unless he checks the site.
+  // The `jacob-alert` template is still used for operational faults below.
 
   queueBarberStep(next, nowIso, cfg, effects);
 }
