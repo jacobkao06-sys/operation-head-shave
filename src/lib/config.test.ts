@@ -52,3 +52,28 @@ describe("blob credentials — token or OIDC store id", () => {
     expect(blobConfigured()).toBe(false);
   });
 });
+
+describe("placeholder dispatch address guard", () => {
+  const addr = ["ANDREA_EMAIL", "JACOB_EMAIL"];
+  afterEach(() => addr.forEach((k) => delete process.env[k]));
+
+  it("flags an identical pair, ignoring case", async () => {
+    process.env.JACOB_EMAIL = "me@example.invalid";
+    process.env.ANDREA_EMAIL = "ME@Example.Invalid";
+    const { dispatchAddressIsPlaceholder } = await import("./config");
+    expect(dispatchAddressIsPlaceholder()).toBe(true);
+  });
+
+  it("does not flag two different addresses", async () => {
+    process.env.JACOB_EMAIL = "me@example.invalid";
+    process.env.ANDREA_EMAIL = "her@example.invalid";
+    const { dispatchAddressIsPlaceholder } = await import("./config");
+    expect(dispatchAddressIsPlaceholder()).toBe(false);
+  });
+
+  it("does not flag when either is unset", async () => {
+    process.env.JACOB_EMAIL = "me@example.invalid";
+    const { dispatchAddressIsPlaceholder } = await import("./config");
+    expect(dispatchAddressIsPlaceholder()).toBe(false);
+  });
+});

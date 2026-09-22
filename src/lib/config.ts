@@ -95,6 +95,20 @@ export const env_ = {
  * Marketplace integration sets. The SDK resolves either from the environment on
  * its own, so we only need to know whether a store exists at all.
  */
+/**
+ * True when the dispatch address and Jacob's own address are the same. That is
+ * fine during a dry-run rehearsal — it is how he reads Andrea's email — but
+ * going live that way makes the whole system theatre: it would fire, mail him,
+ * and reach nobody, and he might never notice. Surfaced on /admin and in the
+ * event log rather than hard-refused, because a shared address could in
+ * principle be deliberate.
+ */
+export function dispatchAddressIsPlaceholder(): boolean {
+  const andrea = env_.andreaEmail();
+  const jacob = env_.jacobEmail();
+  return Boolean(andrea && jacob && andrea.toLowerCase() === jacob.toLowerCase());
+}
+
 export function blobConfigured(): boolean {
   return Boolean(env_.blobToken() ?? env_.blobStoreId());
 }

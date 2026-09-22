@@ -6,7 +6,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { isAdmin } from "@/lib/auth";
-import { barberAutoArmed, env_ } from "@/lib/config";
+import { barberAutoArmed, dispatchAddressIsPlaceholder, env_ } from "@/lib/config";
 import { TEMPLATE_NAMES, loadTemplate } from "@/lib/notify/templates";
 import { loadIg, loadOverrides, loadState, recentEvents } from "@/lib/store";
 import { ago, fmtIso, fmtLocal } from "@/lib/time";
@@ -121,6 +121,22 @@ export default async function AdminPage() {
           DRY RUN IS OFF — MAIL IS LIVE.
         </p>
       )}
+
+      {dispatchAddressIsPlaceholder() ? (
+        <p
+          className="statusblock"
+          style={{
+            margin: 0,
+            border: "1px solid var(--failure)",
+            padding: "0.7rem 0.9rem",
+            color: "var(--failure)",
+          }}
+        >
+          ANDREA_EMAIL IS THE SAME ADDRESS AS JACOB_EMAIL. Fine for a dry-run rehearsal — it is how
+          you read her email. But go live like this and the dispatch reaches nobody but you: the
+          protocol would fire, mail you, and no one would ever be sent. Replace it before DRY_RUN=false.
+        </p>
+      ) : null}
 
       <section style={sectionStyle}>
         <H>State</H>
