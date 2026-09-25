@@ -113,6 +113,14 @@ never retried — it alerts instead.
 6. Repository secrets for the workflow: `APP_URL` and `CRON_SECRET`.
 7. Do the one-time Meta app setup in SPEC.md §4, then visit `/admin` → **re-run the
    Instagram OAuth flow**. Confirm `IG TOKEN EXPIRES` lands ~60 days out.
+
+   > **Correction to SPEC.md §4 step 4.** It says to add the Instagram account under
+   > Instagram Tester and accept the invite. That is the old Basic Display flow and
+   > does not apply here. Under *Instagram API with Instagram Login*, a tester only
+   > needs to be added for someone who does not already hold a role on the app — and
+   > the app's own Administrator already does. Meta will refuse to demote its only
+   > admin to tester, correctly. Skip it: set the redirect URI, copy the App ID and
+   > Secret, and run the OAuth flow as the admin.
 8. Run the workflow manually via `workflow_dispatch` and check that `log/` gets a commit.
 9. Simulate a full failure from `/admin`, read every email in the outbox, then set
    `DRY_RUN=false`.
