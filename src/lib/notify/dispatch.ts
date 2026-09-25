@@ -31,8 +31,8 @@ export async function resolveRecipient(to: Recipient): Promise<string | null> {
   switch (to) {
     case "jacob":
       return env_.jacobEmail() ?? null;
-    case "andrea":
-      return env_.andreaEmail() ?? null;
+    case "alice":
+      return env_.aliceEmail() ?? null;
     case "barber":
       return env_.barberEmail() ?? null;
   }

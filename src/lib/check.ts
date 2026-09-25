@@ -6,9 +6,9 @@
  *   5. append the audit events    6. perform the side effects
  *
  * Order matters at step 4/6: the state is written BEFORE any mail goes out, so
- * `notifiedAndreaAt` is durable before Andrea could possibly receive anything.
+ * `notifiedAliceAt` is durable before Alice could possibly receive anything.
  * A crash in between loses a notification, which is the safe direction and is
- * visible in the event log. The reverse order would mail Andrea five times.
+ * visible in the event log. The reverse order would mail Alice five times.
  */
 
 import { buildConfig, env_ } from "./config";

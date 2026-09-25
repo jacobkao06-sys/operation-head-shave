@@ -85,7 +85,7 @@ export class FileNotifier implements Notifier {
 /**
  * Picks the delivery channel. Resend whenever a key exists. Without one, the
  * file outbox in development and a hard error in production — silently dropping
- * Andrea's dispatch email would be the worst possible failure mode.
+ * Alice's dispatch email would be the worst possible failure mode.
  */
 export function defaultNotifier(): Notifier {
   if (env_.resendKey()) return new EmailNotifier();

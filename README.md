@@ -72,7 +72,7 @@ GitHub Actions (every 6h)  →  POST /api/check  →  evaluateCheck()  →  KV
 does no I/O and reads no clock, which is why every transition in SPEC.md §3 is covered
 by a millisecond-fast unit test. The caller persists the state, *then* performs the
 effects: a crash in between loses a notification, which is the safe direction and shows
-up in the log. The reverse order would mail Andrea five times.
+up in the log. The reverse order would mail Alice five times.
 
 ### The five rails that matter
 
@@ -139,7 +139,7 @@ The pre-launch checklist is SPEC.md §14.
 | Declared failure but Jacob did post | The post was a Story (never counts), or the video went to TikTok only | Reset from `/admin` with a logged reason. Twice = build `TikTokSource`. |
 | Declared failure, post exists on IG | Media type not in the allowlist | Compare `IG_MEDIA_TYPES` against the post's `media_type`. |
 | Countdown jumps or resets on refresh | Client-side clock math | It must derive from the server's `deadlineAt` only. See `src/components/Countdown.tsx`. |
-| Andrea got five emails | Idempotency guard missing | `notifiedAndreaAt` must be set in the same write as the status change. `src/lib/state.ts` does this; there is a test for it. |
+| Alice got five emails | Idempotency guard missing | `notifiedAliceAt` must be set in the same write as the status change. `src/lib/state.ts` does this; there is a test for it. |
 | Emails land in spam | Domain not verified | Complete the Resend DNS records; keep DMARC at `p=none` initially. |
 | Cron silently stopped | 60 days of repo inactivity | The workflow commits every run to prevent this. Re-enable it in the Actions tab. |
 | Vision check rejects a valid photo | Bad lighting, a hat, low confidence | Confirm manually from `/admin` — the human override always wins. |
@@ -162,5 +162,5 @@ The pre-launch checklist is SPEC.md §14.
   signal; the `PostSource` interface keeps TikTok one file away if that stops being true.
 - No SMS at launch — US long-code needs A2P 10DLC registration. `TelegramNotifier` is
   stubbed against the same interface if a push ping is wanted.
-- Andrea's and the barber's addresses live only in the host's environment, never here.
+- Alice's and the barber's addresses live only in the host's environment, never here.
 - Uploaded photos are never committed to git.

@@ -193,21 +193,21 @@ function declareFailure(
   next.submission = null;
   next.protocolToken = mintToken();
   next.barberApproveToken = mintToken();
-  next.notifiedAndreaAt = null;
+  next.notifiedAliceAt = null;
   next.notifiedJacobFailureAt = null;
   next.barberDraftSentAt = null;
   next.barberSentAt = null;
 
   effects.push(log("failure.declared", { deadlineAt: next.deadlineAt, episode: next.episode }));
 
-  // Andrea: exactly one dispatch email per failure episode.
-  effects.push({ type: "email", template: "andrea", to: "andrea", reason: "failure declared" });
-  next.notifiedAndreaAt = nowIso;
+  // Alice: exactly one dispatch email per failure episode.
+  effects.push({ type: "email", template: "alice", to: "alice", reason: "failure declared" });
+  next.notifiedAliceAt = nowIso;
 
   // NO alert to Jacob on declaration. SPEC.md §4 wanted one as the mitigation
   // for the cross-post gap — a video posted to TikTok only would declare a
   // false failure, and the alert was the 72-hour window to catch it. Jacob
-  // decided on 2026-09-22 that the dispatch should reach Andrea alone, and
+  // decided on 2026-09-22 that the dispatch should reach Alice alone, and
   // accepted that a false firing now runs unopposed unless he checks the site.
   // The `jacob-alert` template is still used for operational faults below.
 
@@ -274,7 +274,7 @@ function resetToSafeFields(next: State): void {
   next.failureDeclaredAt = null;
   next.deadlineAt = null;
   next.remainingMs = null;
-  next.notifiedAndreaAt = null;
+  next.notifiedAliceAt = null;
   next.notifiedJacobFailureAt = null;
   next.barberDraftSentAt = null;
   next.barberSentAt = null;
@@ -357,7 +357,7 @@ export function confirmSubmission(prev: State, now: Date, actor: string): Outcom
     effects: [
       log("submission.confirmed", { actor }),
       { type: "email", template: "jacob-resolved", to: "jacob", reason: "protocol complete" },
-      { type: "email", template: "andrea-resolved", to: "andrea", reason: "protocol complete" },
+      { type: "email", template: "alice-resolved", to: "alice", reason: "protocol complete" },
     ],
   };
 }

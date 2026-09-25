@@ -68,7 +68,7 @@ describe("SAFE -> FAILURE", () => {
     const { state, effects } = driveToFailure(safeWith(8 * DAY, T0));
     expect(state.status).toBe("FAILURE");
     expect(state.consecutiveStaleChecks).toBe(2);
-    expect(emails(effects)).toContain("andrea->andrea");
+    expect(emails(effects)).toContain("alice->alice");
     // Jacob is deliberately NOT warned on declaration — see declareFailure().
     expect(emails(effects)).not.toContain("jacob-alert->jacob");
   });
@@ -187,9 +187,9 @@ describe("hard rule 1 — fail safe", () => {
 });
 
 describe("hard rule 2 — idempotent side effects", () => {
-  it("emails Andrea exactly once per failure episode across repeated checks", () => {
+  it("emails Alice exactly once per failure episode across repeated checks", () => {
     let { state } = driveToFailure(safeWith(8 * DAY, T0));
-    expect(state.notifiedAndreaAt).toBeTruthy();
+    expect(state.notifiedAliceAt).toBeTruthy();
 
     for (const h of [12, 18, 24, 30]) {
       const r = evaluateCheck(
@@ -203,22 +203,22 @@ describe("hard rule 2 — idempotent side effects", () => {
     }
   });
 
-  it("sets notifiedAndreaAt in the same object as the status change", () => {
+  it("sets notifiedAliceAt in the same object as the status change", () => {
     const { state } = driveToFailure(safeWith(8 * DAY, T0));
     expect(state.status).toBe("FAILURE");
-    expect(state.notifiedAndreaAt).toBe(state.failureDeclaredAt);
+    expect(state.notifiedAliceAt).toBe(state.failureDeclaredAt);
   });
 });
 
 describe("who is told when the protocol fires", () => {
-  it("dispatches Andrea and nobody else is warned about the deadline", () => {
+  it("dispatches Alice and nobody else is warned about the deadline", () => {
     const { effects } = driveToFailure(safeWith(8 * DAY, T0), cfg({ barberMode: "off" }));
-    expect(emails(effects)).toEqual(["andrea->andrea"]);
+    expect(emails(effects)).toEqual(["alice->alice"]);
   });
 
   it("still sends Jacob the barber draft, because approving it needs his click", () => {
     const { effects } = driveToFailure(safeWith(8 * DAY, T0), cfg({ barberMode: "draft" }));
-    expect(emails(effects).sort()).toEqual(["andrea->andrea", "jacob-barber-draft->jacob"]);
+    expect(emails(effects).sort()).toEqual(["alice->alice", "jacob-barber-draft->jacob"]);
   });
 });
 
@@ -319,7 +319,7 @@ describe("FAILURE <-> PENDING_REVIEW — §6 freeze semantics", () => {
     expect(r.state.status).toBe("RESOLVED");
     expect(r.state.submission!.confirmedBy).toBe("jacob");
     expect(r.state.deadlineAt).toBeNull();
-    expect(emails(r.effects).sort()).toEqual(["andrea-resolved->andrea", "jacob-resolved->jacob"]);
+    expect(emails(r.effects).sort()).toEqual(["alice-resolved->alice", "jacob-resolved->jacob"]);
   });
 
   it("an upload is ignored when the status is not FAILURE", () => {
@@ -443,7 +443,7 @@ describe("admin overrides — §9", () => {
     const r = adminResetToSafe(failed, at(20 * HOUR), "jacob", "cross-post slip, posted to TikTok only");
     expect(r.state.status).toBe("SAFE");
     expect(r.state.deadlineAt).toBeNull();
-    expect(r.state.notifiedAndreaAt).toBeNull();
+    expect(r.state.notifiedAliceAt).toBeNull();
     expect(r.state.protocolToken).toBeNull();
     const logged = r.effects.find((e) => e.type === "log" && e.event === "admin.reset_to_safe");
     expect(logged).toBeTruthy();

@@ -8,7 +8,7 @@ truth for behaviour, copy, styling, and prohibitions.
 - Never email the barber without a human click while `BARBER_MODE=draft`.
 - Never send any barber email while the template contains the string `PLACEHOLDER`.
 - Never scrape Instagram HTML or use session cookies. Official Graph API only.
-- Never store Andrea's or the barber's contact details in this repo. Env vars only.
+- Never store Alice's or the barber's contact details in this repo. Env vars only.
 - Never transition to FAILURE on an API error, timeout, or empty response.
 - Never trust the client clock or client-reported status. The server owns `deadlineAt`.
 - Never commit uploaded photos.

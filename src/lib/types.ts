@@ -34,7 +34,7 @@ export interface State {
   consecutiveStaleChecks: number;
   failureDeclaredAt: string | null;
   deadlineAt: string | null;
-  notifiedAndreaAt: string | null;
+  notifiedAliceAt: string | null;
   barberDraftSentAt: string | null;
   barberSentAt: string | null;
   submission: Submission | null;
@@ -78,17 +78,17 @@ export type Effect =
   | { type: "email"; template: EmailTemplateName; to: Recipient; reason: string }
   | { type: "log"; event: string; detail?: Record<string, unknown> };
 
-export type Recipient = "jacob" | "andrea" | "barber";
+export type Recipient = "jacob" | "alice" | "barber";
 
 export type EmailTemplateName =
-  | "andrea"
+  | "alice"
   | "barber"
   | "jacob-alert"
   | "jacob-review"
   | "jacob-check-failure"
   | "jacob-barber-draft"
   | "jacob-resolved"
-  | "andrea-resolved"
+  | "alice-resolved"
   | "token-expiry";
 
 export interface Config {
@@ -113,7 +113,7 @@ export const INITIAL_STATE: State = {
   consecutiveStaleChecks: 0,
   failureDeclaredAt: null,
   deadlineAt: null,
-  notifiedAndreaAt: null,
+  notifiedAliceAt: null,
   barberDraftSentAt: null,
   barberSentAt: null,
   submission: null,

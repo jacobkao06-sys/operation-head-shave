@@ -15,12 +15,12 @@ Fill these in. Claude Code should stop and ask if any are blank.
 | # | Decision | Status |
 |---|---|---|
 | D1 | Public hostname | `shave.jacobkao.com` |
-| D2 | Protocol (Andrea) hostname | `protocol.jacobkao.com` |
+| D2 | Protocol (Alice) hostname | `protocol.jacobkao.com` |
 | D3 | Host platform | Vercel (see §2 for the Cloudflare alternative) |
 | D4 | What counts as "a video"? | **CONFIRMED.** Any IG feed post or Reel. Stories do **not** count. |
 | D5 | Does posting *during* the countdown cancel it? | **No.** Once failure is declared, only a verified photo stops it. |
 | D6 | Who can confirm the shaved-head photo? | Jacob, via a signed admin link. Vision model pre-screens. |
-| D7 | Andrea's participation | **CONFIRMED — consent obtained.** Her address goes in `ANDREA_EMAIL`, env var only, never in the repo. |
+| D7 | Alice's participation | **NOT CONFIRMED.** This slot was Andrea's and the brief recorded her consent; the person changed on 2026-09-25, so that consent does not carry over. Alice must agree, and be given a way to opt out, before `DRY_RUN=false`. Her address goes in `ALICE_EMAIL`, env var only, never in the repo. |
 | D8 | Barber send mode | **CONFIRMED.** Launch in `draft` (Jacob approves each send). Switchable to `auto` later on Jacob's explicit say-so — see §7. |
 | D9 | Timezone for all display + boundary math | `America/New_York` |
 | D10 | Platforms tracked | **Instagram only.** Jacob cross-posts every video to both IG and TikTok, so IG is a complete signal. No TikTok integration is needed — see §4. |
@@ -48,7 +48,7 @@ Fill these in. Claude Code should stop and ask if any are blank.
               ▼                  ▼                  ▼
       ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
       │ KV (state)   │   │ Resend       │   │ log/*.json   │
-      │              │   │ → Andrea     │   │ (git audit)  │
+      │              │   │ → Alice     │   │ (git audit)  │
       │              │   │ → Jacob      │   │              │
       └──────┬───────┘   └──────────────┘   └──────────────┘
              │
@@ -101,7 +101,7 @@ interface State {
   consecutiveStaleChecks: number;   // must reach 2 before FAILURE
   failureDeclaredAt: string | null;
   deadlineAt: string | null;        // failureDeclaredAt + 72h
-  notifiedAndreaAt: string | null;
+  notifiedAliceAt: string | null;
   barberDraftSentAt: string | null;
   barberSentAt: string | null;
   submission: {
@@ -122,7 +122,7 @@ interface State {
 
 | From | Trigger | To | Side effects |
 |---|---|---|---|
-| SAFE | `now - lastPostAt > 7d` AND `consecutiveStaleChecks >= 2` AND `!paused` | FAILURE | set `deadlineAt = now + 72h`; email Andrea; email barber **draft** to Jacob; email Jacob an alert |
+| SAFE | `now - lastPostAt > 7d` AND `consecutiveStaleChecks >= 2` AND `!paused` | FAILURE | set `deadlineAt = now + 72h`; email Alice; email barber **draft** to Jacob; email Jacob an alert |
 | FAILURE | image uploaded and accepted | PENDING_REVIEW | countdown display freezes; email Jacob with photo + confirm link |
 | PENDING_REVIEW | Jacob rejects | FAILURE | countdown resumes from remaining time (see §6) |
 | PENDING_REVIEW | Jacob confirms | RESOLVED | email all parties "protocol complete" |
@@ -135,7 +135,7 @@ interface State {
    `lastCheckOk = false`, do **not** increment `consecutiveStaleChecks`, do **not**
    transition. Email Jacob if two consecutive checks fail.
 2. **Idempotent side effects.** Every notification is guarded by its own `*At`
-   timestamp. Andrea gets exactly one dispatch email per failure episode.
+   timestamp. Alice gets exactly one dispatch email per failure episode.
 3. **Server owns the clock.** `deadlineAt` is authoritative and stored server-side.
    The browser renders `deadlineAt - now` and re-syncs from `/api/state` every 30s.
    Never compute the deadline from page-load time.
@@ -225,7 +225,7 @@ means adding TikTok later is one file.
 **The one gap this leaves:** if Jacob ever posts a video to TikTok *only* and skips
 Instagram, the system will declare failure on a week he actually posted. This is a
 known, accepted tradeoff. Two mitigations, both cheap:
-- The failure email to Jacob fires at the same moment as Andrea's, so he gets
+- The failure email to Jacob fires at the same moment as Alice's, so he gets
   72 hours of warning and can override from `/admin` if the miss was a cross-post
   slip rather than a real lapse.
 - Log the override reason. If it happens more than once, that's the signal to
@@ -291,11 +291,11 @@ Open Graph image should render the current status so link previews are part of t
 ## 6. Protocol site — `protocol.jacobkao.com`
 
 Unlisted, not secret-grade. Reached at `/p/<token>` where `<token>` is a 32-char
-URL-safe random string generated at failure time and included in Andrea's link.
+URL-safe random string generated at failure time and included in Alice's link.
 
 - `noindex, nofollow` meta + `X-Robots-Tag` header + `robots.txt` disallow
 - Invalid/expired token → generic 404, no information leak
-- Works well on a phone; assume Andrea opens it on mobile
+- Works well on a phone; assume Alice opens it on mobile
 
 ### Contents
 
@@ -362,7 +362,7 @@ Store templates in KV under `ohs:templates:<name>`, seeded on first boot from fi
 Available variables: `{{deadline_local}}`, `{{deadline_iso}}`, `{{hours_remaining}}`,
 `{{protocol_url}}`, `{{last_post_date}}`, `{{days_since_post}}`, `{{public_url}}`.
 
-**`templates/andrea.md`** (v1 content, per brief — keep it changeable):
+**`templates/alice.md`** (v1 content, per brief — keep it changeable):
 
 ```
 Subject: OPERATION HEAD SHAVE — PROTOCOL ACTIVE
@@ -487,7 +487,7 @@ BLOB_READ_WRITE_TOKEN=
 RESEND_API_KEY=
 MAIL_FROM=protocol@mail.jacobkao.com
 JACOB_EMAIL=
-ANDREA_EMAIL=
+ALICE_EMAIL=
 BARBER_EMAIL=<set BARBER_EMAIL in the host env — never here, see §13>
 BARBER_MODE=draft                 # draft | auto | off — launch as draft
 BARBER_CONFIRM_PHRASE=            # must equal "SEND WITHOUT ASKING" to arm auto
@@ -523,7 +523,7 @@ the countdown renders and ticks correctly.
 date; a forced token refresh succeeds and persists.
 
 **Phase 4 — Notifications.** Resend, template engine, KV-backed templates, dry-run
-mode, idempotency guards. Acceptance: simulated failure sends exactly one Andrea email
+mode, idempotency guards. Acceptance: simulated failure sends exactly one Alice email
 and one Jacob draft, and re-running the check sends nothing further.
 
 **Phase 5 — Protocol page.** Token generation, upload, validation, EXIF strip, vision
@@ -549,7 +549,7 @@ README with the runbook from §12.
 | Declared failure but Jacob did post | Post was a Story (never counts), or the video went to TikTok only and wasn't cross-posted | Reset via admin with a logged reason. Repeat occurrences justify building `TikTokSource`. |
 | Declared failure, post exists on IG | Media type not in allowlist | Check `IG_MEDIA_TYPES` against the post's `media_type`. |
 | Countdown jumps or resets on refresh | Client-side clock math | Countdown must derive from server `deadlineAt` only. |
-| Andrea got five emails | Idempotency guard missing | `notifiedAndreaAt` must be set in the same write as the status change. |
+| Alice got five emails | Idempotency guard missing | `notifiedAliceAt` must be set in the same write as the status change. |
 | Emails land in spam | Domain not verified | Complete Resend DNS records; keep DMARC at `p=none` initially. |
 | Cron silently stopped | 60 days of repo inactivity | Workflow must commit each run. Re-enable in the Actions tab. |
 | Vision check rejects a valid photo | Bad lighting, hat, low confidence | Admin can confirm manually — the human override always wins. |
@@ -562,7 +562,7 @@ README with the runbook from §12.
   `BARBER_MODE=draft`. Do not add retry logic to barber sends. Do not send at all
   while the template contains the string `PLACEHOLDER`, in any mode.
 - **Never** scrape Instagram HTML or use logged-in session cookies.
-- **Never** store Andrea's or the barber's contact details in the repository.
+- **Never** store Alice's or the barber's contact details in the repository.
 - **Never** trust the client clock, client-reported status, or client-side validation
   of uploads.
 - **Never** transition to FAILURE on an API error, timeout, or empty response.
@@ -577,9 +577,9 @@ README with the runbook from §12.
 - [ ] Meta app created, long-lived token minted
 - [ ] `tokenExpiresAt` visible in `/admin` and ~60 days out
 - [ ] `DRY_RUN=true`, full simulated failure run completed, all emails reviewed
-- [x] Andrea has consented
-- [ ] Andrea knows what the email will look like and has a way to opt out
-- [ ] `ANDREA_EMAIL` set in host env (not in repo, not in `.env.example`)
+- [ ] Alice has consented — see D7; the previous tick referred to a different person
+- [ ] Alice knows what the email will look like and has a way to opt out
+- [ ] `ALICE_EMAIL` set in host env (not in repo, not in `.env.example`)
 - [ ] Barber template still says PLACEHOLDER, `BARBER_MODE=draft`, `BARBER_CONFIRM_PHRASE` empty
 - [ ] DNS: both subdomains resolve, TLS valid
 - [ ] Resend domain verified, test email delivered to inbox not spam

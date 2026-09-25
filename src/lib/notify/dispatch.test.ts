@@ -58,7 +58,7 @@ const NOW = new Date("2026-09-01T12:00:00.000Z");
 beforeEach(() => {
   __setBackend(memoryBackend());
   process.env.JACOB_EMAIL = "jacob@example.invalid";
-  process.env.ANDREA_EMAIL = "andrea@example.invalid";
+  process.env.ALICE_EMAIL = "alice@example.invalid";
   process.env.BARBER_EMAIL = "barber@example.invalid";
   process.env.PUBLIC_URL = "https://shave.example.invalid";
   process.env.PROTOCOL_URL = "https://protocol.example.invalid";
@@ -96,37 +96,37 @@ describe("DRY_RUN", () => {
   it("redirects to Jacob and names the intended recipient in the subject", async () => {
     const n = new CapturingNotifier();
     const r = await dispatch(
-      { type: "email", template: "andrea", to: "andrea", reason: "failure declared" },
+      { type: "email", template: "alice", to: "alice", reason: "failure declared" },
       { state: failed, now: NOW },
       { notifier: n, barberIsPlaceholder: true },
     );
     expect(r.ok).toBe(true);
     expect(r.dryRun).toBe(true);
     expect(n.sent[0].to).toBe("jacob@example.invalid");
-    expect(n.sent[0].subject).toContain("[DRY RUN → andrea@example.invalid]");
-    expect(n.sent[0].body).toContain("was NOT sent to andrea@example.invalid");
+    expect(n.sent[0].subject).toContain("[DRY RUN → alice@example.invalid]");
+    expect(n.sent[0].body).toContain("was NOT sent to alice@example.invalid");
   });
 
   it("goes to the real recipient once DRY_RUN is off", async () => {
     process.env.DRY_RUN = "false";
     const n = new CapturingNotifier();
     const r = await dispatch(
-      { type: "email", template: "andrea", to: "andrea", reason: "failure declared" },
+      { type: "email", template: "alice", to: "alice", reason: "failure declared" },
       { state: failed, now: NOW },
       { notifier: n, barberIsPlaceholder: true },
     );
     expect(r.dryRun).toBe(false);
-    expect(n.sent[0].to).toBe("andrea@example.invalid");
+    expect(n.sent[0].to).toBe("alice@example.invalid");
     expect(n.sent[0].subject).not.toContain("DRY RUN");
   });
 });
 
 describe("template rendering", () => {
-  it("interpolates the protocol link and the deadline into Andrea's email", async () => {
+  it("interpolates the protocol link and the deadline into Alice's email", async () => {
     process.env.DRY_RUN = "false";
     const n = new CapturingNotifier();
     await dispatch(
-      { type: "email", template: "andrea", to: "andrea", reason: "" },
+      { type: "email", template: "alice", to: "alice", reason: "" },
       { state: failed, now: NOW },
       { notifier: n, barberIsPlaceholder: true },
     );
@@ -149,11 +149,11 @@ describe("template rendering", () => {
   });
 
   it("reports a missing recipient rather than sending to nobody", async () => {
-    delete process.env.ANDREA_EMAIL;
+    delete process.env.ALICE_EMAIL;
     process.env.DRY_RUN = "false";
     const n = new CapturingNotifier();
     const r = await dispatch(
-      { type: "email", template: "andrea", to: "andrea", reason: "" },
+      { type: "email", template: "alice", to: "alice", reason: "" },
       { state: failed, now: NOW },
       { notifier: n, barberIsPlaceholder: true },
     );
@@ -165,11 +165,11 @@ describe("template rendering", () => {
 
 describe("audit accuracy", () => {
   it("reports the real dry-run state even when the recipient is unset", async () => {
-    delete process.env.ANDREA_EMAIL;
+    delete process.env.ALICE_EMAIL;
     process.env.DRY_RUN = "true";
     const n = new CapturingNotifier();
     const r = await dispatch(
-      { type: "email", template: "andrea", to: "andrea", reason: "" },
+      { type: "email", template: "alice", to: "alice", reason: "" },
       { state: failed, now: NOW },
       { notifier: n, barberIsPlaceholder: true },
     );

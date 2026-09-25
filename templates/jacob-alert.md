@@ -1,6 +1,6 @@
 Subject: OPERATION HEAD SHAVE — FAILURE DECLARED
 
-The protocol has commenced. Andrea has been notified.
+The protocol has commenced. Alice has been notified.
 
   LAST POST ......... {{last_post_date}} ({{days_since_post}} days ago)
   DEADLINE .......... {{deadline_local}}

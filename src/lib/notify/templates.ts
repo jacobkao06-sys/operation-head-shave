@@ -19,13 +19,13 @@ export interface RenderedTemplate {
 const TEMPLATE_DIR = path.join(process.cwd(), "templates");
 
 export const TEMPLATE_NAMES: EmailTemplateName[] = [
-  "andrea",
+  "alice",
   "barber",
   "jacob-alert",
   "jacob-barber-draft",
   "jacob-review",
   "jacob-resolved",
-  "andrea-resolved",
+  "alice-resolved",
   "jacob-check-failure",
   "token-expiry",
 ];

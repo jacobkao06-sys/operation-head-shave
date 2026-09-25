@@ -54,19 +54,19 @@ describe("blob credentials — token or OIDC store id", () => {
 });
 
 describe("placeholder dispatch address guard", () => {
-  const addr = ["ANDREA_EMAIL", "JACOB_EMAIL"];
+  const addr = ["ALICE_EMAIL", "JACOB_EMAIL"];
   afterEach(() => addr.forEach((k) => delete process.env[k]));
 
   it("flags an identical pair, ignoring case", async () => {
     process.env.JACOB_EMAIL = "me@example.invalid";
-    process.env.ANDREA_EMAIL = "ME@Example.Invalid";
+    process.env.ALICE_EMAIL = "ME@Example.Invalid";
     const { dispatchAddressIsPlaceholder } = await import("./config");
     expect(dispatchAddressIsPlaceholder()).toBe(true);
   });
 
   it("does not flag two different addresses", async () => {
     process.env.JACOB_EMAIL = "me@example.invalid";
-    process.env.ANDREA_EMAIL = "her@example.invalid";
+    process.env.ALICE_EMAIL = "her@example.invalid";
     const { dispatchAddressIsPlaceholder } = await import("./config");
     expect(dispatchAddressIsPlaceholder()).toBe(false);
   });

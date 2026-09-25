@@ -64,7 +64,7 @@ export const env_ = {
   resendKey: () => env("RESEND_API_KEY"),
   mailFrom: () => env("MAIL_FROM") ?? "protocol@mail.jacobkao.com",
   jacobEmail: () => env("JACOB_EMAIL"),
-  andreaEmail: () => env("ANDREA_EMAIL"),
+  aliceEmail: () => env("ALICE_EMAIL"),
   barberEmail: () => env("BARBER_EMAIL"),
   barberMode: (): Config["barberMode"] => {
     const v = (env("BARBER_MODE") ?? "draft").toLowerCase();
@@ -97,16 +97,16 @@ export const env_ = {
  */
 /**
  * True when the dispatch address and Jacob's own address are the same. That is
- * fine during a dry-run rehearsal — it is how he reads Andrea's email — but
+ * fine during a dry-run rehearsal — it is how he reads Alice's email — but
  * going live that way makes the whole system theatre: it would fire, mail him,
  * and reach nobody, and he might never notice. Surfaced on /admin and in the
  * event log rather than hard-refused, because a shared address could in
  * principle be deliberate.
  */
 export function dispatchAddressIsPlaceholder(): boolean {
-  const andrea = env_.andreaEmail();
+  const alice = env_.aliceEmail();
   const jacob = env_.jacobEmail();
-  return Boolean(andrea && jacob && andrea.toLowerCase() === jacob.toLowerCase());
+  return Boolean(alice && jacob && alice.toLowerCase() === jacob.toLowerCase());
 }
 
 export function blobConfigured(): boolean {

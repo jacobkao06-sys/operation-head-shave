@@ -132,7 +132,7 @@ export default async function AdminPage() {
             color: "var(--failure)",
           }}
         >
-          ANDREA_EMAIL IS THE SAME ADDRESS AS JACOB_EMAIL. Fine for a dry-run rehearsal — it is how
+          ALICE_EMAIL IS THE SAME ADDRESS AS JACOB_EMAIL. Fine for a dry-run rehearsal — it is how
           you read her email. But go live like this and the dispatch reaches nobody but you: the
           protocol would fire, mail you, and no one would ever be sent. Replace it before DRY_RUN=false.
         </p>
@@ -149,7 +149,7 @@ STALE STREAK ...... ${state.consecutiveStaleChecks} / 2
 FAILED STREAK ..... ${state.consecutiveFailedChecks}
 DEADLINE .......... ${fmtLocal(state.deadlineAt)}
 FROZEN REMAINDER .. ${state.remainingMs !== null ? `${(state.remainingMs / 3_600_000).toFixed(2)}h` : "—"}
-ANDREA NOTIFIED ... ${fmtIso(state.notifiedAndreaAt)}
+ALICE NOTIFIED ... ${fmtIso(state.notifiedAliceAt)}
 BARBER DRAFT ...... ${fmtIso(state.barberDraftSentAt)}
 BARBER SENT ....... ${fmtIso(state.barberSentAt)}
 IG TOKEN EXPIRES .. ${fmtIso(state.tokenExpiresAt ?? ig?.expiresAt ?? null)}${
