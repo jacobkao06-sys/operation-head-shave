@@ -86,6 +86,9 @@ up in the log. The reverse order would mail Alice five times.
 4. **The barber is unreachable by accident.** Four independent checks, listed below.
 5. **Nothing the client says is believed** — not the filename, the content type, the
    status, or the clock.
+6. **Proof is a live camera frame.** No file input, and `/api/upload` requires a
+   signed capture token issued by the protocol page in the last 15 minutes. An
+   old photo of a shaved head must not be able to halt a live countdown.
 
 ### The barber rails (SPEC.md §7, §13)
 

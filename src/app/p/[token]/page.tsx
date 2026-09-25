@@ -9,8 +9,9 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Countdown } from "@/components/Countdown";
-import { UploadForm } from "@/components/UploadForm";
+import { CameraCapture } from "@/components/CameraCapture";
 import { loadState } from "@/lib/store";
+import { mintCaptureToken } from "@/lib/auth";
 import { hhmmss } from "@/lib/time";
 import { safeEqual } from "@/lib/tokens";
 
@@ -22,15 +23,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
 };
 
-export default async function ProtocolPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ token: string }>;
-  searchParams: Promise<{ r?: string }>;
-}) {
+export default async function ProtocolPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const { r } = await searchParams;
   const state = await loadState();
 
   // A closed episode looks exactly like a made-up token.
@@ -73,13 +67,20 @@ export default async function ProtocolPage({
           </noscript>
         </div>
 
+        <noscript>
+          <p className="caption">
+            This page needs JavaScript. Proof must be taken with the camera on this device — there
+            is no file upload, deliberately — and that is not possible with scripting disabled.
+          </p>
+        </noscript>
+
         {frozen ? (
           <p className="caption">
             Proof has been submitted and the countdown is frozen. Nothing more is needed here
             unless it is rejected, in which case the clock resumes from where it stopped.
           </p>
         ) : (
-          <UploadForm token={token} initialResult={r} />
+          <CameraCapture token={token} captureToken={mintCaptureToken(token)} />
         )}
       </div>
     </main>

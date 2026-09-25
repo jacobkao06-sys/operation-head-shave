@@ -15,6 +15,7 @@ import { MAX_BYTES, UploadError, normalize, storePhoto } from "@/lib/photo";
 import { acceptSubmission } from "@/lib/state";
 import { appendEvent, loadState, rateLimit, saveState } from "@/lib/store";
 import { safeEqual } from "@/lib/tokens";
+import { verifyCaptureToken } from "@/lib/auth";
 import { accepts, prescreen } from "@/lib/vision";
 import type { Submission } from "@/lib/types";
 
@@ -49,6 +50,20 @@ export async function POST(req: Request) {
 
   if (state.status !== "FAILURE") {
     return reply(req, token, 409, "NOT_ACTIVE", `The protocol is ${state.status}. Nothing to halt.`);
+  }
+
+  // The capture must come from a protocol page loaded in the last 15 minutes.
+  // This is the server-side half of "live camera only" (§6, amended
+  // 2026-09-25): without it the camera-only UI is decoration, because this
+  // endpoint would still take any bytes anyone posted at it.
+  if (!verifyCaptureToken(token, String(form.get("captureToken") ?? ""))) {
+    return reply(
+      req,
+      token,
+      403,
+      "STALE_CAPTURE",
+      "This page went stale, or the photo did not come from it. Reload and take the photo again.",
+    );
   }
 
   // §6 rate limits. Per-token first so a global flood cannot lock out the one

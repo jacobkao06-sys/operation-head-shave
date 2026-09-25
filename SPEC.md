@@ -301,7 +301,15 @@ URL-safe random string generated at failure time and included in Alice's link.
 
 1. Countdown, same styling as the main site, synced to server `deadlineAt`.
 2. One line of instruction: `UPLOAD PROOF OF SHAVED HEAD TO HALT COUNTDOWN`.
-3. File input (camera capture enabled on mobile: `accept="image/*" capture="environment"`).
+3. ~~File input (camera capture enabled on mobile: `accept="image/*" capture="environment"`).~~
+   **AMENDED 2026-09-25 — live camera only, no file input.** `capture` is only a
+   hint: most browsers still let the viewer reach the photo library, and desktop
+   ignores it entirely. That let an old photo of a shaved head halt a live
+   countdown, which defeats the premise. Proof is now a frame from
+   `getUserMedia`, and `/api/upload` additionally requires a signed capture
+   token minted by the protocol page within the last 15 minutes. Neither proves
+   the pixels came from a lens — nothing on the web can — but the easy cheat is
+   gone. Consequence: the protocol page now requires JavaScript.
 4. Result state after upload.
 
 ### Upload handling

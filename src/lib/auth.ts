@@ -47,3 +47,42 @@ export function verifyReviewLink(action: "confirm" | "reject", episode: number, 
   if (!token || !t) return false;
   return verifyPayload(t, token) === `${action}:${episode}`;
 }
+
+/**
+ * Freshness token for a proof capture. SPEC.md §6, amended 2026-09-25.
+ *
+ * The protocol page mints one when it renders; /api/upload refuses a submission
+ * without a valid, recent one. This is the server-side half of "live camera
+ * only": without it the endpoint would still accept any bytes anyone posted at
+ * it, and the camera-only UI would be decoration.
+ *
+ * What it actually guarantees: the upload came from a protocol page loaded in
+ * the last CAPTURE_WINDOW_MS, for THIS failure episode. What it does not
+ * guarantee: that the pixels came from a lens. Nothing on the web can.
+ */
+export const CAPTURE_WINDOW_MS = 15 * 60 * 1000;
+
+export function mintCaptureToken(protocolToken: string, now = Date.now()): string {
+  const secret = env_.adminToken();
+  if (!secret) return "";
+  return signPayload(`cap:${protocolToken}:${now}`, secret);
+}
+
+export function verifyCaptureToken(
+  protocolToken: string,
+  supplied: string | null | undefined,
+  now = Date.now(),
+  windowMs = CAPTURE_WINDOW_MS,
+): boolean {
+  const secret = env_.adminToken();
+  if (!secret || !supplied) return false;
+  const payload = verifyPayload(supplied, secret);
+  if (!payload) return false;
+  const prefix = `cap:${protocolToken}:`;
+  if (!payload.startsWith(prefix)) return false;
+  const issued = Number(payload.slice(prefix.length));
+  if (!Number.isFinite(issued)) return false;
+  const age = now - issued;
+  // Reject a clock-skewed future token as well as a stale one.
+  return age >= -60_000 && age <= windowMs;
+}
