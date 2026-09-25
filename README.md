@@ -114,13 +114,19 @@ never retried — it alerts instead.
 7. Do the one-time Meta app setup in SPEC.md §4, then visit `/admin` → **re-run the
    Instagram OAuth flow**. Confirm `IG TOKEN EXPIRES` lands ~60 days out.
 
-   > **Correction to SPEC.md §4 step 4.** It says to add the Instagram account under
-   > Instagram Tester and accept the invite. That is the old Basic Display flow and
-   > does not apply here. Under *Instagram API with Instagram Login*, a tester only
-   > needs to be added for someone who does not already hold a role on the app — and
-   > the app's own Administrator already does. Meta will refuse to demote its only
-   > admin to tester, correctly. Skip it: set the redirect URI, copy the App ID and
-   > Secret, and run the OAuth flow as the admin.
+   > **SPEC.md §4 step 4 is correct and you cannot skip it.** The Instagram account
+   > must be added as an **Instagram tester** and the invite accepted from
+   > Instagram → Settings → Apps and Websites → Tester Invites. Skipping it fails at
+   > the end of the OAuth flow with `Insufficient Developer Role`, which is confusing
+   > because nothing earlier complains.
+   >
+   > The trap: being an **Administrator of the app** is a role held by your *Facebook*
+   > account. This flow authenticates an *Instagram* account, which Meta treats as a
+   > separate identity with no inherited trust. Two different lists:
+   >
+   > - **App Roles** — Facebook accounts. Refuses to demote its only admin. Not this.
+   > - **Instagram Testers** — Instagram usernames. This one. Adding yourself here
+   >   does not change or threaten your admin role.
 8. Run the workflow manually via `workflow_dispatch` and check that `log/` gets a commit.
 9. Simulate a full failure from `/admin`, read every email in the outbox, then set
    `DRY_RUN=false`.
