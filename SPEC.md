@@ -20,7 +20,7 @@ Fill these in. Claude Code should stop and ask if any are blank.
 | D4 | What counts as "a video"? | **CONFIRMED.** Any IG feed post or Reel. Stories do **not** count. |
 | D5 | Does posting *during* the countdown cancel it? | **No.** Once failure is declared, only a verified photo stops it. |
 | D6 | Who can confirm the shaved-head photo? | Jacob, via a signed admin link. Vision model pre-screens. |
-| D7 | Alice's participation | **NOT CONFIRMED.** This slot was Andrea's and the brief recorded her consent; the person changed on 2026-09-25, so that consent does not carry over. Alice must agree, and be given a way to opt out, before `DRY_RUN=false`. Her address goes in `ALICE_EMAIL`, env var only, never in the repo. |
+| D7 | Alice's participation | **CONFIRMED — Alice agreed on 2026-09-25**, replacing Andrea, whose consent did not transfer. Her address goes in `ALICE_EMAIL`, env var only, never in the repo. Still open: that she has seen the actual email and has a way to opt out. |
 | D8 | Barber send mode | **CONFIRMED.** Launch in `draft` (Jacob approves each send). Switchable to `auto` later on Jacob's explicit say-so — see §7. |
 | D9 | Timezone for all display + boundary math | `America/New_York` |
 | D10 | Platforms tracked | **Instagram only.** Jacob cross-posts every video to both IG and TikTok, so IG is a complete signal. No TikTok integration is needed — see §4. |
@@ -577,7 +577,7 @@ README with the runbook from §12.
 - [ ] Meta app created, long-lived token minted
 - [ ] `tokenExpiresAt` visible in `/admin` and ~60 days out
 - [ ] `DRY_RUN=true`, full simulated failure run completed, all emails reviewed
-- [ ] Alice has consented — see D7; the previous tick referred to a different person
+- [x] Alice has consented — agreed 2026-09-25, replacing Andrea
 - [ ] Alice knows what the email will look like and has a way to opt out
 - [ ] `ALICE_EMAIL` set in host env (not in repo, not in `.env.example`)
 - [ ] Barber template still says PLACEHOLDER, `BARBER_MODE=draft`, `BARBER_CONFIRM_PHRASE` empty
