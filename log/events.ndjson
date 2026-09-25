@@ -34,3 +34,4 @@
 {"at":"2026-09-25T11:23:13.964Z","event":"source.error","detail":{"message":"No Instagram token in KV — run /api/auth/instagram/start"}}
 {"at":"2026-09-25T11:23:13.964Z","event":"check.inconclusive","detail":{"fetchOk":false,"hadPost":false,"streak":11}}
 {"at":"2026-09-25T11:23:14Z","event":"cron.run","status":"SAFE","fetchOk":false,"sourceError":"No Instagram token in KV — run /api/auth/instagram/start","conflict":false,"mail":[]}
+{"at":"2026-09-25T16:47:02Z","event":"cron.run","status":"FAILURE","fetchOk":true,"sourceError":null,"conflict":false,"mail":[]}
