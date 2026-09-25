@@ -65,3 +65,22 @@ describe("accepts — §6 acceptance rule", () => {
     expect(accepts(v({ confidence: 0.7 }), 0.7)).toBe(true);
   });
 });
+
+describe("the structured-output schema the API will actually accept", () => {
+  it("uses no range keywords — they 400 the whole request", async () => {
+    const { VISION_SCHEMA } = await import("./vision");
+    // "For 'number' type, properties maximum, minimum are not supported".
+    // With this bug present every upload fails the pre-screen, which means
+    // nobody can ever halt the countdown. Verified against the live API.
+    const json = JSON.stringify(VISION_SCHEMA);
+    for (const banned of ["minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum"]) {
+      expect(json).not.toContain(banned);
+    }
+  });
+
+  it("still demands every field the parser relies on", async () => {
+    const { VISION_SCHEMA } = await import("./vision");
+    expect(VISION_SCHEMA.required).toEqual(["shaved", "confidence", "reason", "is_person"]);
+    expect(VISION_SCHEMA.additionalProperties).toBe(false);
+  });
+});

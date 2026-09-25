@@ -19,11 +19,14 @@ const SYSTEM = [
 const QUESTION =
   "Does this photo show a real person whose head has been shaved (bald or buzzed to the scalp)?";
 
-const SCHEMA = {
+export const VISION_SCHEMA = {
   type: "object",
   properties: {
     shaved: { type: "boolean" },
-    confidence: { type: "number", minimum: 0, maximum: 1 },
+    // No `minimum`/`maximum` here: structured outputs reject range keywords on a
+    // number ("For 'number' type, properties maximum, minimum are not supported"),
+    // which 400s the whole request. parseVerdict clamps to [0,1] anyway.
+    confidence: { type: "number" },
     reason: { type: "string" },
     is_person: { type: "boolean" },
   },
@@ -124,7 +127,7 @@ export async function prescreen(jpeg: Buffer): Promise<VisionVerdict> {
       model: env_.visionModel(),
       max_tokens: 1024,
       system: SYSTEM,
-      output_config: { format: { type: "json_schema", schema: SCHEMA } },
+      output_config: { format: { type: "json_schema", schema: VISION_SCHEMA } },
       messages: [
         {
           role: "user",
