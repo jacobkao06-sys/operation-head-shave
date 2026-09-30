@@ -173,6 +173,9 @@ a {
   display: flex;
   align-items: baseline;
   gap: 0.6ch;
+  /* Matches the caption measure. Without it the leader rules stretch the whole
+     width of a desktop window and read as thin scratches. */
+  max-width: 58ch;
   color: var(--fg-dim);
   font-size: clamp(0.78rem, 3.1vw, 0.85rem);
   line-height: 1.9;
