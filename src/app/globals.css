@@ -223,7 +223,10 @@ a {
     opacity: 0.75;
   }
 
-  .kv-v {
+  /* Matches the specificity of `.kv-v[data-wrap="true"]` above, which would
+     otherwise keep the right alignment that only makes sense beside a leader. */
+  .kv-v,
+  .kv-v[data-wrap="true"] {
     white-space: normal;
     text-align: left;
     word-break: break-word;
