@@ -137,34 +137,16 @@ export function CameraCapture({ token, captureToken }: { token: string; captureT
         LIVE CAMERA ONLY — STORED PHOTOS ARE NOT ACCEPTED
       </p>
 
-      <div
-        style={{
-          border: "1px solid var(--fg-dim)",
-          aspectRatio: "3 / 4",
-          display: "grid",
-          placeItems: "center",
-          overflow: "hidden",
-          background: "#050505",
-        }}
-      >
+      <div className="viewfinder">
         {phase === "review" && shot ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={shot.url}
-            alt="captured frame awaiting submission"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
+          <img src={shot.url} alt="captured frame awaiting submission" />
         ) : (
           <video
             ref={videoRef}
             playsInline
             muted
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: phase === "live" ? "block" : "none",
-            }}
+            style={{ display: phase === "live" ? "block" : "none" }}
           />
         )}
         {phase === "idle" || phase === "starting" ? (
@@ -187,11 +169,23 @@ export function CameraCapture({ token, captureToken }: { token: string; captureT
       ) : null}
 
       {phase === "review" || phase === "sending" ? (
-        <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
-          <button className="btn" type="button" onClick={submit} disabled={phase === "sending"}>
+        <div style={{ display: "flex", gap: "0.6rem" }}>
+          <button
+            className="btn"
+            type="button"
+            onClick={submit}
+            disabled={phase === "sending"}
+            style={{ flex: "2 1 0" }}
+          >
             {phase === "sending" ? "SUBMITTING…" : "SUBMIT PROOF"}
           </button>
-          <button className="btn" type="button" onClick={retake} disabled={phase === "sending"}>
+          <button
+            className="btn"
+            type="button"
+            onClick={retake}
+            disabled={phase === "sending"}
+            style={{ flex: "1 1 0" }}
+          >
             RETAKE
           </button>
         </div>

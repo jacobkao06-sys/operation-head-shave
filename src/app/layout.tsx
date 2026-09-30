@@ -10,6 +10,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#000000",
   colorScheme: "dark",
+  // Full-bleed to the edges of a notched phone. Every screen then keeps its own
+  // content clear of the cutouts via the .screen class in globals.css.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

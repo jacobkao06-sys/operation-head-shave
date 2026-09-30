@@ -39,14 +39,16 @@ export default async function ProtocolPage({ params }: { params: Promise<{ token
 
   return (
     <main
+      className="screen"
       data-status={state.status}
       style={{
         minHeight: "100svh",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "center",
-        gap: "2.25rem",
-        padding: "clamp(1.5rem, 6vw, 4rem)",
+        // Centred when it fits, top-aligned when the camera makes it taller
+        // than the screen — otherwise the heading is pushed off the top.
+        justifyContent: "safe center",
+        gap: "1.5rem",
       }}
     >
       <div className="boot" style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>

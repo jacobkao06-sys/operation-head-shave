@@ -38,6 +38,7 @@ export default async function Page() {
 
   return (
     <main
+      className="screen"
       data-status={state.status}
       style={{
         minHeight: "100svh",
@@ -45,7 +46,6 @@ export default async function Page() {
         flexDirection: "column",
         justifyContent: "center",
         gap: "2rem",
-        padding: "clamp(1.5rem, 5vw, 4rem)",
       }}
     >
       <div className="boot" style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>

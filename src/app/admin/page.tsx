@@ -5,6 +5,7 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import { KeyValue } from "@/components/KeyValue";
 import { isAdmin } from "@/lib/auth";
 import { barberAutoArmed, dispatchAddressIsPlaceholder, env_ } from "@/lib/config";
 import { TEMPLATE_NAMES, loadTemplate } from "@/lib/notify/templates";
@@ -90,9 +91,9 @@ export default async function AdminPage() {
 
   return (
     <main
+      className="screen"
       data-status={state.status}
       style={{
-        padding: "clamp(1.25rem, 4vw, 2.5rem)",
         display: "flex",
         flexDirection: "column",
         gap: "1.25rem",
@@ -105,7 +106,7 @@ export default async function AdminPage() {
           ADMIN / {state.status}
         </h1>
         <form action={signOut}>
-          <button className="btn" type="submit" style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }}>
+          <button className="btn btn-sm" type="submit">
             SIGN OUT
           </button>
         </form>
@@ -140,29 +141,46 @@ export default async function AdminPage() {
 
       <section style={sectionStyle}>
         <H>State</H>
-        <pre className="statusblock" style={{ margin: 0 }}>
-{`STATUS ............ ${state.status}${state.paused ? `  (PAUSED: ${state.pauseReason})` : ""}
-EPISODE ........... ${state.episode}
-LAST POST ......... ${fmtIso(state.lastPostAt)}  ${state.lastPostAt ? ago(state.lastPostAt, now) : ""}
-LAST CHECK ........ ${fmtIso(state.lastCheckedAt)} [${state.lastCheckOk ? "OK" : "FAIL"}]
-STALE STREAK ...... ${state.consecutiveStaleChecks} / 2
-FAILED STREAK ..... ${state.consecutiveFailedChecks}
-DEADLINE .......... ${fmtLocal(state.deadlineAt)}
-FROZEN REMAINDER .. ${state.remainingMs !== null ? `${(state.remainingMs / 3_600_000).toFixed(2)}h` : "—"}
-ALICE NOTIFIED ... ${fmtIso(state.notifiedAliceAt)}
-BARBER DRAFT ...... ${fmtIso(state.barberDraftSentAt)}
-BARBER SENT ....... ${fmtIso(state.barberSentAt)}
-IG TOKEN EXPIRES .. ${fmtIso(state.tokenExpiresAt ?? ig?.expiresAt ?? null)}${
-  (state.tokenExpiresAt ?? ig?.expiresAt)
-    ? `  (${ago(state.tokenExpiresAt ?? ig!.expiresAt, now)})`
-    : "  — no token minted yet"
-}
-VERSION ........... ${state.version}`}
-        </pre>
-        <p className="statusblock" style={{ margin: 0 }}>
-          <a href="/api/auth/instagram/start">RE-RUN THE INSTAGRAM OAUTH FLOW →</a>
-          {"   "}
-          <Link href="/">PUBLIC PAGE →</Link>
+        <div>
+          <KeyValue k="Status" v={`${state.status}${state.paused ? `  (PAUSED: ${state.pauseReason})` : ""}`} wrap />
+          <KeyValue k="Episode" v={String(state.episode)} />
+          <KeyValue
+            k="Last post"
+            v={`${fmtIso(state.lastPostAt)}${state.lastPostAt ? `  ${ago(state.lastPostAt, now)}` : ""}`}
+            wrap
+          />
+          <KeyValue k="Last check" v={`${fmtIso(state.lastCheckedAt)} [${state.lastCheckOk ? "OK" : "FAIL"}]`} wrap />
+          <KeyValue k="Stale streak" v={`${state.consecutiveStaleChecks} / 2`} />
+          <KeyValue k="Failed streak" v={String(state.consecutiveFailedChecks)} />
+          <KeyValue k="Deadline" v={fmtLocal(state.deadlineAt)} wrap />
+          <KeyValue
+            k="Frozen remainder"
+            v={state.remainingMs !== null ? `${(state.remainingMs / 3_600_000).toFixed(2)}h` : "—"}
+          />
+          <KeyValue k="Alice notified" v={fmtIso(state.notifiedAliceAt)} wrap />
+          <KeyValue k="Barber draft" v={fmtIso(state.barberDraftSentAt)} wrap />
+          <KeyValue k="Barber sent" v={fmtIso(state.barberSentAt)} wrap />
+          <KeyValue
+            k="IG token expires"
+            v={
+              (state.tokenExpiresAt ?? ig?.expiresAt)
+                ? `${fmtIso(state.tokenExpiresAt ?? ig!.expiresAt)}  (${ago(state.tokenExpiresAt ?? ig!.expiresAt, now)})`
+                : "— no token minted yet"
+            }
+            wrap
+          />
+          <KeyValue k="Version" v={String(state.version)} />
+        </div>
+        <p
+          className="statusblock"
+          style={{ margin: 0, display: "flex", flexWrap: "wrap", gap: "0 1.5rem" }}
+        >
+          <a className="tap" href="/api/auth/instagram/start">
+            RE-RUN THE INSTAGRAM OAUTH FLOW →
+          </a>
+          <Link className="tap" href="/">
+            PUBLIC PAGE →
+          </Link>
         </p>
       </section>
 
@@ -284,12 +302,16 @@ REASON ............ ${state.submission.vision.reason}`}
             SAVE
           </button>
         </form>
-        <pre className="statusblock" style={{ margin: 0 }}>
-{`EFFECTIVE MODE .... ${effectiveMode}
-AUTO ARMED ........ ${armed ? "YES" : "no"}
-BARBER TEMPLATE ... ${barberPlaceholder ? "still says PLACEHOLDER — sends are refused in every mode" : "real copy"}
-BARBER ADDRESS .... ${env_.barberEmail() ?? "(BARBER_EMAIL unset)"}`}
-        </pre>
+        <div>
+          <KeyValue k="Effective mode" v={effectiveMode} />
+          <KeyValue k="Auto armed" v={armed ? "YES" : "no"} />
+          <KeyValue
+            k="Barber template"
+            v={barberPlaceholder ? "still says PLACEHOLDER — sends refused in every mode" : "real copy"}
+            wrap
+          />
+          <KeyValue k="Barber address" v={env_.barberEmail() ?? "(BARBER_EMAIL unset)"} wrap />
+        </div>
       </section>
 
       <section style={sectionStyle}>
@@ -302,7 +324,7 @@ BARBER ADDRESS .... ${env_.barberEmail() ?? "(BARBER_EMAIL unset)"}`}
         </p>
         {templates.map((t) => (
           <details key={t.name}>
-            <summary className="statusblock" style={{ cursor: "pointer" }}>
+            <summary className="statusblock tap">
               {t.name}
               {t.source.includes("PLACEHOLDER") ? "  [PLACEHOLDER]" : ""}
             </summary>
@@ -317,7 +339,7 @@ BARBER ADDRESS .... ${env_.barberEmail() ?? "(BARBER_EMAIL unset)"}`}
             </form>
             <form action={doResetTemplate} style={{ marginTop: "0.5rem" }}>
               <input type="hidden" name="name" value={t.name} />
-              <button className="btn" type="submit" style={{ padding: "0.4rem 0.8rem", fontSize: "0.78rem" }}>
+              <button className="btn btn-sm" type="submit">
                 REVERT TO THE FILE
               </button>
             </form>

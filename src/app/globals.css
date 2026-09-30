@@ -8,6 +8,11 @@
   --dim: #00803a;
   --dim-failure: #8a1f1f;
   --mono: ui-monospace, "JetBrains Mono", "IBM Plex Mono", Menlo, Consolas, monospace;
+  --gutter: clamp(1.1rem, 5vw, 4rem);
+  /* iOS zooms the whole page when a focused control is under 16px. Every
+     control in this app is therefore pinned at 16px or above. */
+  --control-font: 1rem;
+  --touch: 44px;
 
   --fg: var(--safe);
   --fg-dim: var(--dim);
@@ -40,11 +45,25 @@ body {
   font-family: var(--mono);
   /* The glow is decoration. Contrast must survive without it. */
   -webkit-font-smoothing: antialiased;
+  /* Stop iOS inflating type when a phone is turned to landscape. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   min-height: 100svh;
   overflow-x: hidden;
+  /* The grey flash on tap reads as a rendering fault against this palette. */
+  -webkit-tap-highlight-color: color-mix(in srgb, var(--fg) 18%, transparent);
+}
+
+/* The viewport is `viewport-fit=cover`, so every full-bleed screen has to keep
+   its own content clear of the notch and the home indicator itself. */
+.screen {
+  padding-left: max(var(--gutter), env(safe-area-inset-left));
+  padding-right: max(var(--gutter), env(safe-area-inset-right));
+  padding-top: max(var(--gutter), env(safe-area-inset-top));
+  padding-bottom: max(var(--gutter), env(safe-area-inset-bottom));
 }
 
 a {
@@ -85,7 +104,7 @@ a {
 
 .heading {
   color: var(--fg);
-  font-size: clamp(4rem, 18vw, 14rem);
+  font-size: clamp(3rem, min(18vw, 26vh), 14rem);
   line-height: 0.88;
   letter-spacing: -0.045em;
   text-transform: uppercase;
@@ -113,7 +132,7 @@ a {
 }
 
 .caption {
-  font-size: 1rem;
+  font-size: clamp(0.95rem, 3.6vw, 1.05rem);
   line-height: 1.75;
   max-width: 60ch;
   color: var(--fg);
@@ -126,7 +145,7 @@ a {
 
 .countdown {
   color: var(--fg);
-  font-size: clamp(2.5rem, 12vw, 8rem);
+  font-size: clamp(2.2rem, min(13vw, 16vh), 8rem);
   line-height: 1;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
@@ -137,11 +156,78 @@ a {
 }
 
 .statusblock {
-  font-size: 0.82rem;
+  font-size: clamp(0.78rem, 3.1vw, 0.85rem);
   line-height: 1.9;
   color: var(--fg-dim);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* --- Key/value rows ------------------------------------------------------ */
+/* These replace hand-padded "LABEL ..... value" strings inside a <pre>. Those
+   looked right only at one width: wrapped on a phone they split mid-value and
+   the leader dots ran into the data. Here the leader is a flexing rule, so it
+   simply gets shorter — and below 560px the row stacks instead. */
+
+.kv {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6ch;
+  color: var(--fg-dim);
+  font-size: clamp(0.78rem, 3.1vw, 0.85rem);
+  line-height: 1.9;
+}
+
+.kv-k {
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.kv-lead {
+  flex: 1 1 auto;
+  min-width: 1.5ch;
+  align-self: center;
+  border-bottom: 1px dotted currentColor;
+  opacity: 0.55;
+}
+
+.kv-v {
+  white-space: nowrap;
+  color: var(--fg);
+  opacity: 0.85;
+}
+
+/* Long values (a full local timestamp) are allowed to wrap rather than force a
+   horizontal scrollbar. */
+.kv-v[data-wrap="true"] {
+  white-space: normal;
+  text-align: right;
+}
+
+@media (max-width: 560px) {
+  .kv {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    line-height: 1.5;
+    margin-bottom: 0.55rem;
+  }
+
+  .kv-lead {
+    display: none;
+  }
+
+  .kv-k {
+    font-size: 0.72rem;
+    opacity: 0.75;
+  }
+
+  .kv-v {
+    white-space: normal;
+    text-align: left;
+    word-break: break-word;
+  }
 }
 
 /* --- Blinking block cursor ----------------------------------------------- */
@@ -198,10 +284,11 @@ a {
 
 .btn {
   font-family: var(--mono);
-  font-size: 0.95rem;
+  font-size: var(--control-font);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 0.85rem 1.4rem;
+  min-height: var(--touch);
   background: transparent;
   color: var(--fg);
   border: 1px solid var(--fg);
@@ -222,8 +309,10 @@ a {
 
 .field {
   font-family: var(--mono);
-  font-size: 0.95rem;
+  /* Never below 16px: iOS zooms the page on focus otherwise. */
+  font-size: var(--control-font);
   width: 100%;
+  min-height: var(--touch);
   padding: 0.7rem 0.8rem;
   background: #050505;
   color: var(--fg);
@@ -263,5 +352,58 @@ a:focus-visible {
 
   * {
     transition: none !important;
+  }
+}
+
+/* --- Touch targets -------------------------------------------------------- */
+/* Anything tappable gets at least 44px of height. On a phone these were 15px
+   links and 25px disclosure triangles — technically present, practically not. */
+
+.tap {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+  padding: 0.35rem 0;
+}
+
+.btn-sm {
+  font-size: 0.85rem;
+  padding: 0.6rem 1rem;
+  min-height: var(--touch);
+}
+
+summary.tap {
+  cursor: pointer;
+  list-style-position: outside;
+}
+
+/* --- Camera ---------------------------------------------------------------- */
+/* dvh, not vh: mobile browser chrome shrinks the visible viewport as you
+   scroll, and a vh-sized viewfinder pushes the capture button off screen at
+   exactly the moment it is needed. Capped so the button always stays in view. */
+
+.viewfinder {
+  border: 1px solid var(--fg-dim);
+  background: #050505;
+  aspect-ratio: 3 / 4;
+  max-height: 52dvh;
+  width: 100%;
+  margin-inline: auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.viewfinder > video,
+.viewfinder > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .viewfinder {
+    max-height: 62dvh;
+    aspect-ratio: 4 / 3;
   }
 }
