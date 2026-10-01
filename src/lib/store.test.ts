@@ -70,3 +70,46 @@ describe("forward compatibility", () => {
     expect(s.protocolToken).toBeNull();
   });
 });
+
+describe("the local file store under concurrent writes", () => {
+  // Regression: unserialised read-modify-write produced malformed JSON, which
+  // the reader then treated as "no state yet". State appeared to save and then
+  // silently vanish — it cost several wasted runs before it was spotted.
+  it("does not lose writes when many land at once", async () => {
+    const { __setBackend: reset, getBackend } = await import("./store");
+    reset(null);
+    const dir = await import("node:fs/promises");
+    const os = await import("node:os");
+    const path = await import("node:path");
+    const tmp = await dir.mkdtemp(path.join(os.tmpdir(), "ohs-store-"));
+    const cwd = process.cwd();
+    process.chdir(tmp);
+    try {
+      delete process.env.UPSTASH_REDIS_REST_URL;
+      delete process.env.UPSTASH_REDIS_REST_TOKEN;
+      const backend = getBackend();
+
+      await Promise.all([
+        backend.set("a", 1),
+        backend.set("b", 2),
+        backend.set("c", 3),
+        backend.pushEvent({ at: "t", event: "one", status: "SAFE" }, 100),
+        backend.pushEvent({ at: "t", event: "two", status: "SAFE" }, 100),
+        backend.set("d", 4),
+      ]);
+
+      expect(await backend.get("a")).toBe(1);
+      expect(await backend.get("b")).toBe(2);
+      expect(await backend.get("c")).toBe(3);
+      expect(await backend.get("d")).toBe(4);
+      expect((await backend.listEvents(10)).length).toBe(2);
+
+      // And the file on disk must still be valid JSON.
+      const raw = await dir.readFile(path.join(tmp, ".ohs-local-state.json"), "utf8");
+      expect(() => JSON.parse(raw)).not.toThrow();
+    } finally {
+      process.chdir(cwd);
+      reset(null);
+    }
+  });
+});

@@ -117,74 +117,125 @@ interface FileShape {
 class FileBackend implements Backend {
   private file = path.join(process.cwd(), ".ohs-local-state.json");
 
-  private async read(): Promise<FileShape> {
-    try {
-      const raw = await fs.readFile(this.file, "utf8");
-      const parsed = JSON.parse(raw) as FileShape;
-      const now = Date.now();
-      for (const [k, entry] of Object.entries(parsed.kv)) {
-        if (entry.exp && entry.exp < now) delete parsed.kv[k];
-      }
-      return parsed;
-    } catch {
-      return { kv: {}, events: [] };
-    }
-  }
+  /**
+   * Every operation here is a read-modify-write of one file. A single request
+   * performs several in quick succession — saveState, a few appendEvents,
+   * saveSimulateResult — and without serialisation those interleave and write
+   * malformed JSON over each other. The reader then treated an unparseable file
+   * as "no state yet" and silently started from nothing, so state appeared to
+   * save and then vanish. Operations are queued, and writes are atomic.
+   *
+   * Upstash does not have this problem: its operations are atomic server-side.
+   * This only ever bit local development, which is also the only place it is
+   * hard to notice.
+   */
+  private queue: Promise<unknown> = Promise.resolve();
 
-  private async write(data: FileShape): Promise<void> {
-    await fs.writeFile(this.file, JSON.stringify(data, null, 2));
-  }
-
-  async get<T>(key: string): Promise<T | null> {
-    const d = await this.read();
-    return (d.kv[key]?.v as T) ?? null;
-  }
-
-  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-    const d = await this.read();
-    d.kv[key] = { v: value, exp: ttlSeconds ? Date.now() + ttlSeconds * 1000 : undefined };
-    await this.write(d);
-  }
-
-  async del(key: string): Promise<void> {
-    const d = await this.read();
-    delete d.kv[key];
-    await this.write(d);
-  }
-
-  async casSet(key: string, value: State, expectedVersion: number): Promise<boolean> {
-    const d = await this.read();
-    const cur = d.kv[key]?.v as State | undefined;
-    if (cur && cur.version !== expectedVersion) return false;
-    d.kv[key] = { v: value };
-    await this.write(d);
-    return true;
-  }
-
-  async pushEvent(line: EventLine, cap: number): Promise<void> {
-    const d = await this.read();
-    d.events.unshift(line);
-    d.events = d.events.slice(0, cap);
-    await this.write(d);
-  }
-
-  async listEvents(limit: number): Promise<EventLine[]> {
-    const d = await this.read();
-    return d.events.slice(0, limit);
-  }
-
-  async incr(key: string, ttlSeconds: number): Promise<number> {
-    const d = await this.read();
-    const cur = (d.kv[key]?.v as number) ?? 0;
-    const next = cur + 1;
-    d.kv[key] = { v: next, exp: d.kv[key]?.exp ?? Date.now() + ttlSeconds * 1000 };
-    await this.write(d);
+  private serialize<T>(op: () => Promise<T>): Promise<T> {
+    const next = this.queue.then(op, op);
+    // Keep the chain alive even if one operation rejects.
+    this.queue = next.catch(() => undefined);
     return next;
   }
 
+  private async read(): Promise<FileShape> {
+    let raw: string;
+    try {
+      raw = await fs.readFile(this.file, "utf8");
+    } catch {
+      return { kv: {}, events: [] };
+    }
+    let parsed: FileShape;
+    try {
+      parsed = JSON.parse(raw) as FileShape;
+    } catch {
+      // Loud, because silently discarding it is how this went unnoticed.
+      console.error(
+        `[ohs] ${this.file} is corrupt and is being ignored. Local state has been lost. ` +
+          `Delete the file to start clean.`,
+      );
+      return { kv: {}, events: [] };
+    }
+    const now = Date.now();
+    for (const [k, entry] of Object.entries(parsed.kv)) {
+      if (entry.exp && entry.exp < now) delete parsed.kv[k];
+    }
+    return parsed;
+  }
+
+  /** Write to a sibling temp file and rename: a reader never sees a half-write. */
+  private async write(data: FileShape): Promise<void> {
+    const tmp = `${this.file}.${process.pid}.tmp`;
+    await fs.writeFile(tmp, JSON.stringify(data, null, 2));
+    await fs.rename(tmp, this.file);
+  }
+
+  async get<T>(key: string): Promise<T | null> {
+    return this.serialize(async () => {
+      const d = await this.read();
+      return (d.kv[key]?.v as T) ?? null;
+    });
+  }
+
+  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
+    return this.serialize(async () => {
+      const d = await this.read();
+      d.kv[key] = { v: value, exp: ttlSeconds ? Date.now() + ttlSeconds * 1000 : undefined };
+      await this.write(d);
+    });
+  }
+
+  async del(key: string): Promise<void> {
+    return this.serialize(async () => {
+      const d = await this.read();
+      delete d.kv[key];
+      await this.write(d);
+    });
+  }
+
+  async casSet(key: string, value: State, expectedVersion: number): Promise<boolean> {
+    return this.serialize(async () => {
+      const d = await this.read();
+      const cur = d.kv[key]?.v as State | undefined;
+      if (cur && cur.version !== expectedVersion) return false;
+      d.kv[key] = { v: value };
+      await this.write(d);
+      return true;
+    });
+  }
+
+  async pushEvent(line: EventLine, cap: number): Promise<void> {
+    return this.serialize(async () => {
+      const d = await this.read();
+      d.events.unshift(line);
+      d.events = d.events.slice(0, cap);
+      await this.write(d);
+    });
+  }
+
+  async listEvents(limit: number): Promise<EventLine[]> {
+    return this.serialize(async () => {
+      const d = await this.read();
+      return d.events.slice(0, limit);
+    });
+  }
+
+  async incr(key: string, ttlSeconds: number): Promise<number> {
+    return this.serialize(async () => {
+      const d = await this.read();
+      const cur = (d.kv[key]?.v as number) ?? 0;
+      const next = cur + 1;
+      d.kv[key] = { v: next, exp: d.kv[key]?.exp ?? Date.now() + ttlSeconds * 1000 };
+      await this.write(d);
+      return next;
+    });
+  }
+
   async keys(prefix: string): Promise<string[]> {
-    const d = await this.read();
-    return Object.keys(d.kv).filter((k) => k.startsWith(prefix));
+    return this.serialize(async () => {
+      const d = await this.read();
+      return Object.keys(d.kv).filter((k) => k.startsWith(prefix));
+    });
   }
 }
 
