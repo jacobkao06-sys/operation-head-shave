@@ -1,20 +1,36 @@
+#!/usr/bin/env node
+/**
+ * Records a 540x960 walkthrough of a simulated failing check, for upscaling to
+ * 1080x1920. Run against the LOCAL dev server with USE_MOCK_SOURCE=true — never
+ * production, since it declares a real failure and dispatches real mail.
+ *
+ *   npm run dev -- --port 3007     # in another terminal
+ *   node scripts/record-demo.mjs
+ *
+ * Then upscale (any full ffmpeg build; the one Playwright bundles is VP8-only):
+ *   ffmpeg -i <out>.webm -vf "scale=1080:1920:flags=lanczos,unsharp=5:5:0.6,fps=30" \
+ *          -c:v libx264 -pix_fmt yuv420p -crf 20 -movflags +faststart out.mp4
+ */
+
 import { chromium } from "playwright";
 
-const BASE = "http://localhost:3007";
-const ADMIN = "dev-admin-token";
-const OUT = "/private/tmp/claude-501/-Users-jacobkao/21126b87-622d-4870-b05b-1b4aa1a76d59/scratchpad/rec";
+const BASE = process.env.BASE_URL ?? "http://localhost:3007";
+const ADMIN = process.env.ADMIN_TOKEN ?? "dev-admin-token";
+const OUT = process.env.OUT_DIR ?? "./.ohs-recording";
 
-// A phone viewport in CSS pixels, captured at 3x so the output is 1080x1920.
-// Recording at a 1080px-wide viewport would render the DESKTOP layout at phone
-// dimensions, which is the opposite of what a mobile recording should show.
-const VIEWPORT = { width: 360, height: 640 };
-const SIZE = { width: 1080, height: 1920 };
+// Playwright draws the page into the video at CSS-pixel scale — it will letterbox
+// a small viewport rather than scale it up. So record at 540x960, which is still
+// under the 560px mobile breakpoint and therefore gets the phone layout, then
+// upscale exactly 2x to 1080x1920 in ffmpeg. Recording at a 1080px-wide viewport
+// would instead render the DESKTOP layout at phone dimensions.
+const VIEWPORT = { width: 540, height: 960 };
+const SIZE = VIEWPORT;
 const beat = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const browser = await chromium.launch();
 const ctx = await browser.newContext({
   viewport: VIEWPORT,
-  deviceScaleFactor: 3,
+  deviceScaleFactor: 2,
   recordVideo: { dir: OUT, size: SIZE },
 });
 const page = await ctx.newPage();
@@ -64,11 +80,16 @@ await field.fill(stale);
 await beat(800);
 await run.click();
 await verdict.waitFor({ timeout: 15000 });
-await verdict.scrollIntoViewIfNeeded();
-await page.waitForSelector("text=SENDING MESSAGE TO ALICE", { timeout: 15000 });
+const alice = page.locator("text=SENDING MESSAGE TO ALICE").first();
+await alice.waitFor({ timeout: 15000 });
 panel = await page.locator("main").innerText();
 must(/SAFE → FAILURE/.test(panel), "second check should declare failure");
-await beat(7000);
+// Hold on the verdict first, then bring the dispatch line into the middle of
+// the frame — it is the whole point of the recording.
+await verdict.scrollIntoViewIfNeeded();
+await beat(4000);
+await alice.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "smooth" }));
+await beat(5500);
 
 // 5. Public page: now red, counting down.
 await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
