@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "OPERATION HEAD SHAVE",
   description:
-    "A public accountability system. If Jacob does not post a video for 7 days, a 72-hour countdown starts.",
+    "A public accountability system. If Jacob does not post a video for 2 weeks, a 72-hour countdown starts.",
 };
 
 export const viewport: Viewport = {

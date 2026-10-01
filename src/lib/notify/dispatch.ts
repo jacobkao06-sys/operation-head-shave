@@ -174,3 +174,67 @@ export async function dispatch(
     };
   }
 }
+
+/**
+ * Sends a template to Jacob exactly as its real recipient would receive it —
+ * no DRY RUN subject prefix, no banner. SPEC.md §14 asks that Alice knows what
+ * the email will look like, and a preview wrapped in warnings does not answer
+ * that question.
+ *
+ * The recipient is hardcoded to JACOB_EMAIL. It is deliberately not a
+ * parameter: this is the one path that skips the dry-run rail, so it must not
+ * be able to address anyone else, whatever the caller passes.
+ *
+ * When there is no live failure episode the variables are synthesised so the
+ * mail reads like a real dispatch. The protocol link in that case points at a
+ * token that does not exist and will 404 — which is correct, since no countdown
+ * is running.
+ */
+export async function sendPreview(
+  template: EmailTemplateName,
+  state: State,
+  now = new Date(),
+  opts: { notifier?: Notifier } = {},
+): Promise<DispatchResult> {
+  const base: Omit<DispatchResult, "ok" | "resolvedTo"> = { template, to: "jacob", dryRun: false };
+  const jacob = env_.jacobEmail();
+  if (!jacob) {
+    return { ...base, resolvedTo: "(unset)", ok: false, error: "JACOB_EMAIL is not set" };
+  }
+
+  // A plausible live episode, so the copy renders the way Alice would see it.
+  const sample: State =
+    state.status === "FAILURE" || state.status === "PENDING_REVIEW"
+      ? state
+      : {
+          ...state,
+          status: "FAILURE",
+          failureDeclaredAt: now.toISOString(),
+          deadlineAt: new Date(now.getTime() + env_.countdownHours() * HOUR_MS).toISOString(),
+          protocolToken: "PREVIEW0000000000000000000000000",
+          barberApproveToken: "PREVIEW0000000000000000000000000",
+          lastPostAt:
+            state.lastPostAt ??
+            new Date(now.getTime() - env_.failureThresholdHours() * HOUR_MS).toISOString(),
+        };
+
+  const vars = buildVars({ state: sample, now, reason: "" });
+  if (template === "jacob-barber-draft") {
+    const barber = split(await loadTemplate("barber"));
+    vars.barber_draft = `Subject: ${interpolate(barber.subject, vars)}\n\n${interpolate(barber.body, vars)}`;
+  }
+
+  const { subject, body } = await render(template, vars);
+  try {
+    const notifier = opts.notifier ?? defaultNotifier();
+    await notifier.send(jacob, subject, body);
+    return { ...base, resolvedTo: jacob, ok: true };
+  } catch (err) {
+    return {
+      ...base,
+      resolvedTo: jacob,
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}

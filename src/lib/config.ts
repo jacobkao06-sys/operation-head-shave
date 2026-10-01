@@ -38,7 +38,7 @@ export const env_ = {
   publicUrl: () => env("PUBLIC_URL") ?? "http://localhost:3000",
   protocolUrl: () => env("PROTOCOL_URL") ?? "http://localhost:3000",
   tz: () => env("TZ_DISPLAY") ?? "America/New_York",
-  failureThresholdHours: () => num("FAILURE_THRESHOLD_HOURS", 168),
+  failureThresholdHours: () => num("FAILURE_THRESHOLD_HOURS", 336),
   countdownHours: () => num("COUNTDOWN_HOURS", 72),
   /** SPEC.md §10: flip to false only after a full simulated run. */
   dryRun: () => bool("DRY_RUN", true),

@@ -20,6 +20,7 @@ import {
   doResetToSafe,
   doSaveOverrides,
   doSaveTemplate,
+  doSendPreview,
   doUnpause,
   signIn,
   signOut,
@@ -188,7 +189,7 @@ export default async function AdminPage() {
         <H>Simulate a check</H>
         <p className="statusblock" style={{ margin: 0 }}>
           Forces lastPostAt to an arbitrary date and runs a full check, so the whole failure chain is
-          exercisable without waiting 7 days. Two consecutive stale checks are still required.
+          exercisable without waiting two weeks. Two consecutive stale checks are still required.
         </p>
         <form action={doCheck} style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
           <input
@@ -317,7 +318,9 @@ REASON ............ ${state.submission.vision.reason}`}
       <section style={sectionStyle}>
         <H>Templates</H>
         <p className="statusblock" style={{ margin: 0 }}>
-          Stored in KV, seeded from /templates. Edits take effect immediately, no redeploy. Variables:{" "}
+          Stored in KV, seeded from /templates. Edits take effect immediately, no redeploy. A
+          preview is sent to you exactly as its real recipient would see it — no dry-run banner —
+          so you can forward it on. Variables:{" "}
           <code>
             {"{{deadline_local}} {{deadline_iso}} {{hours_remaining}} {{protocol_url}} {{last_post_date}} {{days_since_post}} {{public_url}}"}
           </code>
@@ -337,12 +340,20 @@ REASON ............ ${state.submission.vision.reason}`}
                 </button>
               </div>
             </form>
-            <form action={doResetTemplate} style={{ marginTop: "0.5rem" }}>
-              <input type="hidden" name="name" value={t.name} />
-              <button className="btn btn-sm" type="submit">
-                REVERT TO THE FILE
-              </button>
-            </form>
+            <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+              <form action={doResetTemplate}>
+                <input type="hidden" name="name" value={t.name} />
+                <button className="btn btn-sm" type="submit">
+                  REVERT TO THE FILE
+                </button>
+              </form>
+              <form action={doSendPreview}>
+                <input type="hidden" name="name" value={t.name} />
+                <button className="btn btn-sm" type="submit">
+                  EMAIL ME A PREVIEW
+                </button>
+              </form>
+            </div>
           </details>
         ))}
       </section>

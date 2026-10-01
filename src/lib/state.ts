@@ -30,7 +30,7 @@ export interface Outcome {
 export type TokenMinter = () => string;
 
 export const DEFAULT_CONFIG: Config = {
-  failureThresholdHours: 168,
+  failureThresholdHours: 336,
   countdownHours: 72,
   requiredStaleChecks: 2,
   barberMode: "draft",
@@ -104,7 +104,8 @@ export function evaluateCheck(
     effects.push(log("post.observed", { id: post.id, timestamp: post.timestamp }));
   }
 
-  // --- Staleness. Hard rule 4: 168 hours from the post timestamp. --------
+  // --- Staleness. Hard rule 4: whole hours from the post timestamp, never
+  // calendar days. 336h (two weeks) since 2026-09-30; 168h before that. -----
   const ageMs = next.lastPostAt ? now - Date.parse(next.lastPostAt) : Infinity;
   const stale = ageMs > cfg.failureThresholdHours * HOUR_MS;
   next.consecutiveStaleChecks = stale ? prev.consecutiveStaleChecks + 1 : 0;

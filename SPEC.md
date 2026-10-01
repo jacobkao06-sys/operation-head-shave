@@ -1,6 +1,6 @@
 # OPERATION HEAD SHAVE — Build Spec
 
-A public accountability system. If Jacob doesn't post a video for 7 days, a 72-hour
+A public accountability system. If Jacob doesn't post a video for 2 weeks, a 72-hour
 countdown starts and a designated person is dispatched to shave his head.
 
 Hand this whole file to Claude Code as the project brief. Save it in the repo as
@@ -139,7 +139,9 @@ interface State {
 3. **Server owns the clock.** `deadlineAt` is authoritative and stored server-side.
    The browser renders `deadlineAt - now` and re-syncs from `/api/state` every 30s.
    Never compute the deadline from page-load time.
-4. **7 days means 168 hours** from the post's `timestamp`, not "7 calendar days."
+4. **The window is counted in whole hours** from the post's `timestamp`, never in
+   calendar days. **AMENDED 2026-09-30: 336 hours (two weeks)**; it was 168 hours
+   (one week) until then.
 5. Every transition appends a line to `log/events.ndjson`.
 
 ---
@@ -253,13 +255,13 @@ enhancement.
 
 **SAFE mode** — heading `SAFE` in phosphor green.
 
-> Jacob **has** posted a video in the past week, so his hair is safe.
+> Jacob **has** posted a video in the past two weeks, so his hair is safe.
 
 (Note: the original brief read "so he his hair is safe." Typo corrected.)
 
 **FAILURE mode** — heading `FAILURE` in alert red.
 
-> Jacob has failed to post a video in the past 7 days. Head shave protocol has
+> Jacob has failed to post a video in the past 2 weeks. Head shave protocol has
 > commenced and operation Jacob goes bald is imminent.
 
 Plus the live 72-hour countdown, large and monospaced: `71:58:04`.
@@ -456,7 +458,7 @@ cookie. No user accounts.
 Capabilities:
 - View full state and recent events
 - **Simulate**: force `lastPostAt` to an arbitrary date and run a check — lets you
-  exercise the entire failure chain without waiting 7 days
+  exercise the entire failure chain without waiting two weeks
 - **Dry run**: global flag that redirects every outbound email to Jacob with a
   `[DRY RUN → intended recipient]` banner
 - Pause / unpause with a reason
@@ -475,7 +477,7 @@ Capabilities:
 PUBLIC_URL=https://shave.jacobkao.com
 PROTOCOL_URL=https://protocol.jacobkao.com
 TZ_DISPLAY=America/New_York
-FAILURE_THRESHOLD_HOURS=168
+FAILURE_THRESHOLD_HOURS=336
 COUNTDOWN_HOURS=72
 DRY_RUN=true                      # flip to false only after a full simulated run
 

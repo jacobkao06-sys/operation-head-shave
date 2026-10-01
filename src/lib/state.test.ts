@@ -42,20 +42,23 @@ function safeWith(ageMs: number, now: Date, over: Partial<State> = {}): State {
 }
 
 /** Runs checks until FAILURE is declared, returning the final outcome. */
+const STALE_AGE_MS = (DEFAULT_CONFIG.failureThresholdHours + 24) * HOUR;
+
 function driveToFailure(start: State, config = cfg()) {
   let s = start;
-  let last = evaluateCheck(s, { now: at(0), fetchOk: true, latestPost: post(at(-8 * DAY)) }, config, mint);
+  const stale = () => post(at(-STALE_AGE_MS));
+  let last = evaluateCheck(s, { now: at(0), fetchOk: true, latestPost: stale() }, config, mint);
   s = last.state;
-  last = evaluateCheck(s, { now: at(6 * HOUR), fetchOk: true, latestPost: post(at(-8 * DAY)) }, config, mint);
+  last = evaluateCheck(s, { now: at(6 * HOUR), fetchOk: true, latestPost: stale() }, config, mint);
   return last;
 }
 
 describe("SAFE -> FAILURE", () => {
   it("does not fire on the first stale check (requires two)", () => {
-    const s = safeWith(8 * DAY, T0);
+    const s = safeWith(STALE_AGE_MS, T0);
     const { state, effects } = evaluateCheck(
       s,
-      { now: T0, fetchOk: true, latestPost: post(at(-8 * DAY)) },
+      { now: T0, fetchOk: true, latestPost: post(at(-STALE_AGE_MS)) },
       cfg(),
       mint,
     );
@@ -65,7 +68,7 @@ describe("SAFE -> FAILURE", () => {
   });
 
   it("fires on the second consecutive stale check", () => {
-    const { state, effects } = driveToFailure(safeWith(8 * DAY, T0));
+    const { state, effects } = driveToFailure(safeWith(STALE_AGE_MS, T0));
     expect(state.status).toBe("FAILURE");
     expect(state.consecutiveStaleChecks).toBe(2);
     expect(emails(effects)).toContain("alice->alice");
@@ -74,35 +77,53 @@ describe("SAFE -> FAILURE", () => {
   });
 
   it("sets deadlineAt to exactly 72h after the declaration, not after the post", () => {
-    const { state } = driveToFailure(safeWith(8 * DAY, T0));
+    const { state } = driveToFailure(safeWith(STALE_AGE_MS, T0));
     const declared = Date.parse(state.failureDeclaredAt!);
     expect(Date.parse(state.deadlineAt!) - declared).toBe(72 * HOUR);
     expect(state.failureDeclaredAt).toBe(at(6 * HOUR).toISOString());
   });
 
-  it("treats the threshold as 168 hours from the post timestamp, not calendar days", () => {
-    // 167h59m old: not stale. One minute later: stale.
-    const almost = safeWith(168 * HOUR - 60_000, T0);
+  it("defaults to a two-week window, counted in hours", () => {
+    // Amended 2026-09-30 from 168h (one week) to 336h (two weeks).
+    expect(DEFAULT_CONFIG.failureThresholdHours).toBe(336);
+  });
+
+  it("counts whole hours from the post timestamp, not calendar days", () => {
+    const H = DEFAULT_CONFIG.failureThresholdHours;
+    // One minute inside the window: not stale. One minute past it: stale.
+    const almost = safeWith(H * HOUR - 60_000, T0);
     const a = evaluateCheck(
       almost,
-      { now: T0, fetchOk: true, latestPost: post(at(-(168 * HOUR - 60_000))) },
+      { now: T0, fetchOk: true, latestPost: post(at(-(H * HOUR - 60_000))) },
       cfg(),
       mint,
     );
     expect(a.state.consecutiveStaleChecks).toBe(0);
 
-    const just = safeWith(168 * HOUR + 60_000, T0);
+    const just = safeWith(H * HOUR + 60_000, T0);
     const b = evaluateCheck(
       just,
-      { now: T0, fetchOk: true, latestPost: post(at(-(168 * HOUR + 60_000))) },
+      { now: T0, fetchOk: true, latestPost: post(at(-(H * HOUR + 60_000))) },
       cfg(),
       mint,
     );
     expect(b.state.consecutiveStaleChecks).toBe(1);
   });
 
+  it("still honours an explicitly configured window", () => {
+    // Eight days: stale under the old one-week rule, safe under the new one.
+    const eightDays = safeWith(8 * DAY, T0);
+    const input = { now: T0, fetchOk: true, latestPost: post(at(-8 * DAY)) };
+
+    const week = evaluateCheck(eightDays, input, cfg({ failureThresholdHours: 168 }), mint);
+    expect(week.state.consecutiveStaleChecks).toBe(1);
+
+    const fortnight = evaluateCheck(eightDays, input, cfg(), mint);
+    expect(fortnight.state.consecutiveStaleChecks).toBe(0);
+  });
+
   it("mints a 2-token episode and bumps the episode counter", () => {
-    const { state } = driveToFailure(safeWith(8 * DAY, T0));
+    const { state } = driveToFailure(safeWith(STALE_AGE_MS, T0));
     expect(state.protocolToken).toBeTruthy();
     expect(state.barberApproveToken).toBeTruthy();
     expect(state.protocolToken).not.toBe(state.barberApproveToken);
@@ -111,15 +132,15 @@ describe("SAFE -> FAILURE", () => {
 
   it("does not fire while paused", () => {
     const { state, effects } = driveToFailure(
-      safeWith(8 * DAY, T0, { paused: true, pauseReason: "travelling" }),
+      safeWith(STALE_AGE_MS, T0, { paused: true, pauseReason: "travelling" }),
     );
     expect(state.status).toBe("SAFE");
     expect(emails(effects)).toEqual([]);
   });
 
   it("resets the stale counter when a fresh post appears", () => {
-    const s = safeWith(8 * DAY, T0);
-    const first = evaluateCheck(s, { now: T0, fetchOk: true, latestPost: post(at(-8 * DAY)) }, cfg(), mint);
+    const s = safeWith(STALE_AGE_MS, T0);
+    const first = evaluateCheck(s, { now: T0, fetchOk: true, latestPost: post(at(-STALE_AGE_MS)) }, cfg(), mint);
     expect(first.state.consecutiveStaleChecks).toBe(1);
     const second = evaluateCheck(
       first.state,
@@ -188,13 +209,13 @@ describe("hard rule 1 — fail safe", () => {
 
 describe("hard rule 2 — idempotent side effects", () => {
   it("emails Alice exactly once per failure episode across repeated checks", () => {
-    let { state } = driveToFailure(safeWith(8 * DAY, T0));
+    let { state } = driveToFailure(safeWith(STALE_AGE_MS, T0));
     expect(state.notifiedAliceAt).toBeTruthy();
 
     for (const h of [12, 18, 24, 30]) {
       const r = evaluateCheck(
         state,
-        { now: at(h * HOUR), fetchOk: true, latestPost: post(at(-8 * DAY)) },
+        { now: at(h * HOUR), fetchOk: true, latestPost: post(at(-STALE_AGE_MS)) },
         cfg(),
         mint,
       );
@@ -204,7 +225,7 @@ describe("hard rule 2 — idempotent side effects", () => {
   });
 
   it("sets notifiedAliceAt in the same object as the status change", () => {
-    const { state } = driveToFailure(safeWith(8 * DAY, T0));
+    const { state } = driveToFailure(safeWith(STALE_AGE_MS, T0));
     expect(state.status).toBe("FAILURE");
     expect(state.notifiedAliceAt).toBe(state.failureDeclaredAt);
   });
@@ -212,19 +233,19 @@ describe("hard rule 2 — idempotent side effects", () => {
 
 describe("who is told when the protocol fires", () => {
   it("dispatches Alice and nobody else is warned about the deadline", () => {
-    const { effects } = driveToFailure(safeWith(8 * DAY, T0), cfg({ barberMode: "off" }));
+    const { effects } = driveToFailure(safeWith(STALE_AGE_MS, T0), cfg({ barberMode: "off" }));
     expect(emails(effects)).toEqual(["alice->alice"]);
   });
 
   it("still sends Jacob the barber draft, because approving it needs his click", () => {
-    const { effects } = driveToFailure(safeWith(8 * DAY, T0), cfg({ barberMode: "draft" }));
+    const { effects } = driveToFailure(safeWith(STALE_AGE_MS, T0), cfg({ barberMode: "draft" }));
     expect(emails(effects).sort()).toEqual(["alice->alice", "jacob-barber-draft->jacob"]);
   });
 });
 
 describe("D5 — posting during the countdown does not cancel it", () => {
   it("stays in FAILURE and keeps the same deadline when a new post lands", () => {
-    const { state: failed } = driveToFailure(safeWith(8 * DAY, T0));
+    const { state: failed } = driveToFailure(safeWith(STALE_AGE_MS, T0));
     const r = evaluateCheck(
       failed,
       { now: at(12 * HOUR), fetchOk: true, latestPost: post(at(11 * HOUR), "fresh") },
@@ -239,7 +260,7 @@ describe("D5 — posting during the countdown does not cancel it", () => {
 });
 
 describe("the barber step — §7 and §13", () => {
-  const failFrom = (config: Config) => driveToFailure(safeWith(8 * DAY, T0), config);
+  const failFrom = (config: Config) => driveToFailure(safeWith(STALE_AGE_MS, T0), config);
 
   it("draft mode emails Jacob, never the barber", () => {
     const { state, effects } = failFrom(cfg({ barberMode: "draft" }));
@@ -292,7 +313,7 @@ describe("FAILURE <-> PENDING_REVIEW — §6 freeze semantics", () => {
   });
 
   it("freezes the countdown: stores remaining time and clears the deadline", () => {
-    const { state: failed } = driveToFailure(safeWith(8 * DAY, T0));
+    const { state: failed } = driveToFailure(safeWith(STALE_AGE_MS, T0));
     // failure declared at T0+6h, deadline T0+78h. Upload at T0+30h -> 48h left.
     const r = acceptSubmission(failed, at(30 * HOUR), submission());
     expect(r.state.status).toBe("PENDING_REVIEW");
@@ -302,7 +323,7 @@ describe("FAILURE <-> PENDING_REVIEW — §6 freeze semantics", () => {
   });
 
   it("rejection resumes from the frozen remainder — time stops, it does not reset", () => {
-    const { state: failed } = driveToFailure(safeWith(8 * DAY, T0));
+    const { state: failed } = driveToFailure(safeWith(STALE_AGE_MS, T0));
     const frozen = acceptSubmission(failed, at(30 * HOUR), submission()).state;
     // Jacob sits on it for 10 hours, then rejects.
     const r = rejectSubmission(frozen, at(40 * HOUR), "jacob", "that is a hat");
@@ -313,7 +334,7 @@ describe("FAILURE <-> PENDING_REVIEW — §6 freeze semantics", () => {
   });
 
   it("confirmation resolves and notifies both parties", () => {
-    const { state: failed } = driveToFailure(safeWith(8 * DAY, T0));
+    const { state: failed } = driveToFailure(safeWith(STALE_AGE_MS, T0));
     const frozen = acceptSubmission(failed, at(30 * HOUR), submission()).state;
     const r = confirmSubmission(frozen, at(31 * HOUR), "jacob");
     expect(r.state.status).toBe("RESOLVED");
@@ -331,7 +352,7 @@ describe("FAILURE <-> PENDING_REVIEW — §6 freeze semantics", () => {
 
 describe("RESOLVED -> SAFE", () => {
   it("returns to SAFE only on a post newer than the failure declaration", () => {
-    const { state: failed } = driveToFailure(safeWith(8 * DAY, T0));
+    const { state: failed } = driveToFailure(safeWith(STALE_AGE_MS, T0));
     const frozen = acceptSubmission(failed, at(30 * HOUR), {
       blobKey: "k",
       blobUrl: "u",
@@ -345,7 +366,7 @@ describe("RESOLVED -> SAFE", () => {
     // An older post does not resurrect SAFE.
     const stale = evaluateCheck(
       resolved,
-      { now: at(40 * HOUR), fetchOk: true, latestPost: post(at(-8 * DAY)) },
+      { now: at(40 * HOUR), fetchOk: true, latestPost: post(at(-STALE_AGE_MS)) },
       cfg(),
       mint,
     );
@@ -431,7 +452,7 @@ describe("token expiry alarm — §4", () => {
 
 describe("admin overrides — §9", () => {
   it("pause records the reason and suppresses the next declaration", () => {
-    const paused = pause(safeWith(8 * DAY, T0), T0, "jacob", "flu").state;
+    const paused = pause(safeWith(STALE_AGE_MS, T0), T0, "jacob", "flu").state;
     expect(paused.paused).toBe(true);
     expect(paused.pauseReason).toBe("flu");
     const { state } = driveToFailure(paused);
@@ -439,7 +460,7 @@ describe("admin overrides — §9", () => {
   });
 
   it("reset to SAFE clears every failure field and is logged with actor and reason", () => {
-    const { state: failed } = driveToFailure(safeWith(8 * DAY, T0));
+    const { state: failed } = driveToFailure(safeWith(STALE_AGE_MS, T0));
     const r = adminResetToSafe(failed, at(20 * HOUR), "jacob", "cross-post slip, posted to TikTok only");
     expect(r.state.status).toBe("SAFE");
     expect(r.state.deadlineAt).toBeNull();

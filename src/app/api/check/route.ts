@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   }
 
   // Admin "simulate" (§9): force lastPostAt to an arbitrary date and run a
-  // check, so the whole failure chain is exercisable without waiting 7 days.
+  // check, so the whole failure chain is exercisable without waiting two weeks.
   let simulateLastPostAt: string | undefined;
   try {
     const body = (await req.clone().json()) as { simulateLastPostAt?: string };

@@ -15,7 +15,7 @@ export const contentType = "image/png";
 
 export default async function Image() {
   let status = "SAFE";
-  let sub = "Jacob has posted a video in the past week.";
+  let sub = "Jacob has posted a video in the past two weeks.";
   let clock: string | null = null;
 
   try {

@@ -12,7 +12,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { ADMIN_COOKIE, adminCookieValue, isAdmin } from "@/lib/auth";
 import { env_ } from "@/lib/config";
-import { dispatch } from "@/lib/notify/dispatch";
+import { dispatch, sendPreview } from "@/lib/notify/dispatch";
 import {
   TEMPLATE_NAMES,
   barberTemplateIsPlaceholder,
@@ -187,6 +187,21 @@ export async function doSaveOverrides(formData: FormData): Promise<void> {
     autoArmed: next.barberMode === "auto" && phrase === "SEND WITHOUT ASKING",
     dryRun,
   });
+  revalidatePath("/admin");
+}
+
+/**
+ * Mails one template to Jacob exactly as its recipient would see it — no dry-run
+ * banner. Used to answer the §14 checklist item about Alice knowing what she
+ * will receive. The recipient is fixed inside sendPreview; this cannot address
+ * anyone but Jacob.
+ */
+export async function doSendPreview(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const name = String(formData.get("name") ?? "") as EmailTemplateName;
+  if (!TEMPLATE_NAMES.includes(name)) throw new Error(`unknown template ${name}`);
+  const result = await sendPreview(name, await loadState(), new Date());
+  await log("admin.preview_sent", { template: name, ok: result.ok, error: result.error ?? null });
   revalidatePath("/admin");
 }
 

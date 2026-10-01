@@ -178,3 +178,48 @@ describe("audit accuracy", () => {
     expect(r.dryRun).toBe(true);
   });
 });
+
+describe("sendPreview — true to life, and only ever to Jacob", () => {
+  it("sends with no DRY RUN prefix or banner, even while DRY_RUN is on", async () => {
+    process.env.DRY_RUN = "true";
+    const { sendPreview } = await import("./dispatch");
+    const n = new CapturingNotifier();
+    const r = await sendPreview("alice", { ...INITIAL_STATE }, NOW, { notifier: n });
+    expect(r.ok).toBe(true);
+    expect(n.sent[0].subject).toBe("OPERATION HEAD SHAVE — PROTOCOL ACTIVE");
+    expect(n.sent[0].subject).not.toContain("DRY RUN");
+    expect(n.sent[0].body).not.toContain("DRY RUN");
+    expect(n.sent[0].body).not.toContain("{{");
+  });
+
+  it("goes to Jacob even for a template addressed to someone else", async () => {
+    const { sendPreview } = await import("./dispatch");
+    const n = new CapturingNotifier();
+    await sendPreview("alice", { ...INITIAL_STATE }, NOW, { notifier: n });
+    expect(n.sent[0].to).toBe("jacob@example.invalid");
+  });
+
+  it("never mails the barber, even previewing the barber template", async () => {
+    const { sendPreview } = await import("./dispatch");
+    const n = new CapturingNotifier();
+    await sendPreview("barber", { ...INITIAL_STATE }, NOW, { notifier: n });
+    expect(n.sent[0].to).toBe("jacob@example.invalid");
+    expect(n.sent.some((m) => m.to === "barber@example.invalid")).toBe(false);
+  });
+
+  it("synthesises a live-looking deadline when nothing is running", async () => {
+    const { sendPreview } = await import("./dispatch");
+    const n = new CapturingNotifier();
+    await sendPreview("alice", { ...INITIAL_STATE }, NOW, { notifier: n });
+    // A real dispatch always carries a deadline and a protocol link.
+    expect(n.sent[0].body).toMatch(/Deadline: \w/);
+    expect(n.sent[0].body).toContain("/p/");
+  });
+
+  it("uses the real episode when one is live rather than inventing one", async () => {
+    const { sendPreview } = await import("./dispatch");
+    const n = new CapturingNotifier();
+    await sendPreview("alice", failed, NOW, { notifier: n });
+    expect(n.sent[0].body).toContain("/p/ptok");
+  });
+});

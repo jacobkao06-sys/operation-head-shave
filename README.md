@@ -1,6 +1,6 @@
 # OPERATION HEAD SHAVE
 
-A public accountability system. If Jacob doesn't post a video for 7 days, a 72-hour
+A public accountability system. If Jacob doesn't post a video for 2 weeks, a 72-hour
 countdown starts and a designated person is dispatched to shave his head.
 
 **[SPEC.md](SPEC.md) is the source of truth.** This file covers running it and fixing it.
@@ -44,7 +44,7 @@ Each run wipes local state and rebuilds it by driving the real HTTP endpoints, s
 what you see is the actual state machine rather than a fixture. It prints every
 URL including the current protocol token and the barber approve link.
 
-Drive the whole failure chain by hand without waiting seven days:
+Drive the whole failure chain by hand without waiting two weeks:
 
 ```bash
 curl -s -X POST localhost:3000/api/check -H "Authorization: Bearer $CRON_SECRET" -H 'content-type: application/json' -d '{"simulateLastPostAt":"2026-09-01T00:00:00Z"}'

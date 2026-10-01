@@ -56,13 +56,13 @@ export default async function Page() {
 
         {state.status === "SAFE" ? (
           <p className="caption">
-            Jacob <strong>has</strong> posted a video in the past week, so his hair is safe.
+            Jacob <strong>has</strong> posted a video in the past two weeks, so his hair is safe.
           </p>
         ) : null}
 
         {state.status === "FAILURE" || state.status === "PENDING_REVIEW" ? (
           <p className="caption">
-            Jacob has failed to post a video in the past 7 days. Head shave protocol has commenced
+            Jacob has failed to post a video in the past 2 weeks. Head shave protocol has commenced
             and operation Jacob goes bald is imminent.
           </p>
         ) : null}
