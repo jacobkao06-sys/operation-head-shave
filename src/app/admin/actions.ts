@@ -11,7 +11,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { ADMIN_COOKIE, adminCookieValue, isAdmin } from "@/lib/auth";
-import { env_ } from "@/lib/config";
+import { buildConfig, env_ } from "@/lib/config";
 import { dispatch, sendPreview } from "@/lib/notify/dispatch";
 import {
   TEMPLATE_NAMES,
@@ -21,7 +21,14 @@ import {
 } from "@/lib/notify/templates";
 import { runCheck } from "@/lib/check";
 import { adminResetToSafe, confirmSubmission, pause, rejectSubmission, unpause } from "@/lib/state";
-import { appendEvent, loadOverrides, loadState, saveOverrides, saveState } from "@/lib/store";
+import {
+  appendEvent,
+  loadOverrides,
+  loadState,
+  saveOverrides,
+  saveSimulateResult,
+  saveState,
+} from "@/lib/store";
 import { safeEqual } from "@/lib/tokens";
 import type { Effect, EmailTemplateName, State } from "@/lib/types";
 
@@ -133,10 +140,49 @@ export async function doCheck(formData: FormData): Promise<void> {
   await requireAdmin();
   const raw = String(formData.get("simulateLastPostAt") ?? "").trim();
   const simulate = raw && !Number.isNaN(Date.parse(raw)) ? new Date(raw).toISOString() : undefined;
-  const report = await runCheck({ simulateLastPostAt: simulate });
+
+  const before = await loadState();
+  const now = new Date();
+  const report = await runCheck({ simulateLastPostAt: simulate, now });
+  const cfg = buildConfig();
+
+  const lastPostAt = report.state.lastPostAt;
+  const ageHours = lastPostAt ? (now.getTime() - Date.parse(lastPostAt)) / 3_600_000 : null;
+  const inconclusive = !report.fetchOk || report.latestPost === null;
+
+  // "posted" means: a qualifying post exists AND it falls inside the window.
+  // An inconclusive check is neither posted nor not-posted — it is blind, and
+  // saying otherwise would be the one lie this panel must not tell.
+  const posted = !inconclusive && ageHours !== null && ageHours <= cfg.failureThresholdHours;
+
+  await saveSimulateResult({
+    at: now.toISOString(),
+    simulated: simulate ?? null,
+    posted,
+    lastPostAt,
+    ageHours,
+    thresholdHours: cfg.failureThresholdHours,
+    staleStreak: report.state.consecutiveStaleChecks,
+    requiredStaleChecks: cfg.requiredStaleChecks,
+    statusBefore: before.status,
+    statusAfter: report.state.status,
+    deadlineAt: report.state.deadlineAt,
+    inconclusive,
+    sourceError: report.sourceError ?? null,
+    mail: report.dispatched.map((d) => ({
+      template: d.template,
+      to: d.to,
+      resolvedTo: d.resolvedTo,
+      ok: d.ok,
+      dryRun: d.dryRun,
+      error: d.error ?? null,
+    })),
+  });
+
   await log("admin.ran_check", {
     simulated: simulate ?? null,
     status: report.state.status,
+    posted,
     mail: report.dispatched.map((d) => `${d.template}->${d.to}:${d.ok ? "ok" : d.error}`),
   });
   revalidatePath("/admin");

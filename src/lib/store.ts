@@ -28,6 +28,7 @@ export const KEYS = {
   ig: "ohs:ig",
   rl: (bucket: string) => `ohs:rl:${bucket}`,
   overrides: "ohs:overrides",
+  lastSimulate: "ohs:last-simulate",
 } as const;
 
 export interface EventLine {
@@ -277,4 +278,37 @@ export async function loadOverrides(): Promise<Overrides> {
 
 export async function saveOverrides(o: Overrides): Promise<void> {
   await getBackend().set(KEYS.overrides, o);
+}
+
+// --- Last simulated check (SPEC.md §9) ------------------------------------
+
+/**
+ * What the most recent check actually concluded, in plain language, so /admin
+ * can say "didn't post" and "sending message to Alice" rather than leaving the
+ * operator to infer both from a status field that quietly changed.
+ */
+export interface SimulateResult {
+  at: string;
+  simulated: string | null;
+  /** True when a qualifying post was found inside the window. */
+  posted: boolean;
+  lastPostAt: string | null;
+  ageHours: number | null;
+  thresholdHours: number;
+  staleStreak: number;
+  requiredStaleChecks: number;
+  statusBefore: string;
+  statusAfter: string;
+  deadlineAt: string | null;
+  inconclusive: boolean;
+  sourceError: string | null;
+  mail: { template: string; to: string; resolvedTo: string; ok: boolean; dryRun: boolean; error: string | null }[];
+}
+
+export async function saveSimulateResult(r: SimulateResult): Promise<void> {
+  await getBackend().set(KEYS.lastSimulate, r);
+}
+
+export async function loadSimulateResult(): Promise<SimulateResult | null> {
+  return getBackend().get<SimulateResult>(KEYS.lastSimulate);
 }

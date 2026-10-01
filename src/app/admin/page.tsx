@@ -6,10 +6,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { KeyValue } from "@/components/KeyValue";
+import { SimulateResultPanel } from "@/components/SimulateResult";
 import { isAdmin } from "@/lib/auth";
 import { barberAutoArmed, dispatchAddressIsPlaceholder, env_ } from "@/lib/config";
 import { TEMPLATE_NAMES, loadTemplate } from "@/lib/notify/templates";
-import { loadIg, loadOverrides, loadState, recentEvents } from "@/lib/store";
+import { loadIg, loadOverrides, loadSimulateResult, loadState, recentEvents } from "@/lib/store";
 import { ago, fmtIso, fmtLocal } from "@/lib/time";
 import {
   doCheck,
@@ -69,11 +70,12 @@ export default async function AdminPage() {
     );
   }
 
-  const [state, events, overrides, ig] = await Promise.all([
+  const [state, events, overrides, ig, lastSimulate] = await Promise.all([
     loadState(),
     recentEvents(60),
     loadOverrides(),
     loadIg(),
+    loadSimulateResult(),
   ]);
   const templates = await Promise.all(
     TEMPLATE_NAMES.map(async (name) => ({ name, source: await loadTemplate(name) })),
@@ -203,6 +205,18 @@ export default async function AdminPage() {
             RUN CHECK
           </button>
         </form>
+
+        {lastSimulate ? (
+          <div
+            style={{
+              borderTop: "1px solid var(--fg-dim)",
+              paddingTop: "1rem",
+              marginTop: "0.2rem",
+            }}
+          >
+            <SimulateResultPanel r={lastSimulate} />
+          </div>
+        ) : null}
       </section>
 
       {state.status === "PENDING_REVIEW" && state.submission ? (
