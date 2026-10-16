@@ -104,3 +104,5 @@
 {"at":"2026-10-16T03:36:13Z","event":"cron.run","status":"SAFE","fetchOk":true,"sourceError":null,"conflict":false,"mail":[]}
 {"at":"2026-10-16T10:55:55Z","event":"cron.run","status":"SAFE","fetchOk":true,"sourceError":null,"conflict":false,"mail":[]}
 {"at":"2026-10-16T16:15:32Z","event":"cron.run","status":"SAFE","fetchOk":true,"sourceError":null,"conflict":false,"mail":[]}
+{"at":"2026-10-16T20:37:33.715Z","event":"failure.armed","detail":{"consecutiveStaleChecks":1}}
+{"at":"2026-10-16T20:37:34Z","event":"cron.run","status":"SAFE","fetchOk":true,"sourceError":null,"conflict":false,"mail":[]}
