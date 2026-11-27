@@ -230,3 +230,5 @@
 {"at":"2026-11-26T07:18:26Z","event":"cron.run","status":"SAFE","fetchOk":true,"sourceError":null,"conflict":false,"mail":[]}
 {"at":"2026-11-26T21:03:27Z","event":"cron.run","status":"SAFE","fetchOk":true,"sourceError":null,"conflict":false,"mail":[]}
 {"at":"2026-11-27T07:15:11Z","event":"cron.run","status":"SAFE","fetchOk":true,"sourceError":null,"conflict":false,"mail":[]}
+{"at":"2026-11-27T20:48:13.649Z","event":"post.observed","detail":{"id":"18650511544019749","timestamp":"2026-11-27T19:12:10.000Z"}}
+{"at":"2026-11-27T20:48:14Z","event":"cron.run","status":"SAFE","fetchOk":true,"sourceError":null,"conflict":false,"mail":[]}
